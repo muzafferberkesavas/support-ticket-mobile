@@ -1,13 +1,20 @@
 {
   "expo": {
-    "name": "support-ticket-mobile",
+    "name": "Destek Mobil",
     "slug": "support-ticket-mobile",
     "version": "1.0.0",
+    "scheme": "destekmobil",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır.",
+        "NSCameraUsageDescription": "Destek talebinize fotoğraf eklemek için kamera kullanılır.",
+        "NSPhotoLibraryUsageDescription": "Destek talebinize galeriden görsel eklemek için kullanılır."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -16,10 +23,26 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "CAMERA"],
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        { "faceIDPermission": "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır." }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Destek talebinize fotoğraf eklemek için kamera kullanılır.",
+          "photosPermission": "Destek talebinize galeriden görsel eklemek için kullanılır."
+        }
+      ]
+    ]
   }
 }
