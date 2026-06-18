@@ -30,6 +30,7 @@ interface AuthState {
   register: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
   unlock: () => Promise<boolean>;
+  lock: () => void;
   enableBiometric: () => Promise<boolean>;
   disableBiometric: () => Promise<void>;
   setUser: (u: User) => void;
@@ -80,7 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStatus('noauth');
         return;
       }
-      const bioOn = (await isBiometricEnabled()) && cap.available && cap.enrolled;
+      // Emülatörde isEnrolledAsync cold-start'ta tutarsız olabilir; kayıtlı tercih +
+      // donanım yeterli. Doğrulama anında biyometri yoksa cihaz PIN'ine düşülür.
+      const bioOn = (await isBiometricEnabled()) && cap.available;
       setBiometricEnabledState(bioOn);
       if (bioOn) setStatus('locked');
       else await loadSession();
@@ -101,6 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus('ready');
   }, []);
 
+  // Anlık kilitle (demo/güvenlik): biyometrik kilit ekranını gösterir.
+  const lock = useCallback(() => setStatus('locked'), []);
+
   // Kilit ekranında biyometri ile doğrula.
   const unlock = useCallback(async () => {
     const ok = await authenticateBiometric('Destek Mobil kilidini açın');
@@ -111,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Ayarlardan biyometrik girişi aç — önce bir kez doğrulama ister.
   const enableBiometric = useCallback(async () => {
     const cap = await getBiometricCapability();
-    if (!cap.available || !cap.enrolled) return false;
+    if (!cap.available) return false;
     const ok = await authenticateBiometric('Biyometrik girişi etkinleştirin');
     if (ok) {
       await setBiometricEnabled(true);
@@ -141,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         unlock,
+        lock,
         enableBiometric,
         disableBiometric,
         setUser,

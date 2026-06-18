@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Appearance, DevSettings, View } from 'react-native';
+import { ActivityIndicator, Appearance, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -22,7 +22,7 @@ import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { applyInterFont } from '@/theme/fonts';
 import { configureNotifications } from '@/features/push';
 import { getThemePref } from '@/theme/pref';
-import { colors, isDark, scheme } from '@/theme';
+import { colors, isDark } from '@/theme';
 
 // Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
 applyInterFont();
@@ -103,43 +103,23 @@ function RootNavigator() {
 export default function RootLayout() {
   const [themeReady, setThemeReady] = useState(false);
 
-  // Cold-start: kayıtlı tema tercihini uygula. Modül yanlış paletle yüklendiyse
-  // (override henüz set değilken) Appearance override'ı kurup yeniden yükle.
+  // Cold-start: kayıtlı tema tercihini Appearance override'ı olarak kur (in-session
+  // okumalar için). NOT: cold-start'ta StyleSheet'ler sistem temasıyla değerlenir;
+  // override'ı tam uygulamak için reload GEREKMEZ (reload döngüsü riskinden kaçınılır).
+  // Kullanıcı Profil → Görünüm'den seçtiğinde applyThemePref reload ile uygular.
   useEffect(() => {
     let active = true;
     void (async () => {
       const pref = await getThemePref();
-      const want = pref === 'system' ? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light') : pref;
-      if (want !== scheme) {
+      if (pref !== 'system') {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        Appearance.setColorScheme(pref === 'system' ? (null as any) : pref);
-        try {
-          DevSettings.reload();
-          return;
-        } catch {
-          /* noop */
-        }
+        Appearance.setColorScheme(pref as any);
       }
       if (active) setThemeReady(true);
     })();
     return () => {
       active = false;
     };
-  }, []);
-
-  // pref=system iken OS teması değişirse uygula (override yokken tetiklenir).
-  useEffect(() => {
-    const sub = Appearance.addChangeListener(({ colorScheme }) => {
-      const next = colorScheme === 'dark' ? 'dark' : 'light';
-      if (next !== scheme) {
-        try {
-          DevSettings.reload();
-        } catch {
-          /* prod build'de expo-updates gerekir */
-        }
-      }
-    });
-    return () => sub.remove();
   }, []);
 
   const [fontsLoaded, fontError] = useFonts({

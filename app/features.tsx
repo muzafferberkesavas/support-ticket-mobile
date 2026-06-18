@@ -50,8 +50,8 @@ export default function FeaturesScreen() {
       return;
     }
     const cap = await getBiometricCapability();
-    if (!cap.available || !cap.enrolled) {
-      Alert.alert('Kullanılamıyor', 'Cihazınızda kayıtlı bir biyometri (yüz / parmak izi) bulunamadı. Cihaz ayarlarından ekleyin.');
+    if (!cap.available) {
+      Alert.alert('Kullanılamıyor', 'Cihazınızda biyometrik donanım bulunamadı.');
       return;
     }
     const ok = await enableBiometric();

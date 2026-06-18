@@ -26,7 +26,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, setUser, logout, biometricEnabled, enableBiometric, disableBiometric, biometricLabel } = useAuth();
+  const { user, setUser, logout, biometricEnabled, enableBiometric, disableBiometric, biometricLabel, lock } = useAuth();
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
 
@@ -61,8 +61,8 @@ export default function ProfileScreen() {
   async function onToggleBiometric(value: boolean) {
     if (value) {
       const cap = await getBiometricCapability();
-      if (!cap.available || !cap.enrolled) {
-        Alert.alert('Kullanılamıyor', 'Cihazınızda kayıtlı bir biyometri (yüz / parmak izi) bulunamadı.');
+      if (!cap.available) {
+        Alert.alert('Kullanılamıyor', 'Cihazınızda biyometrik donanım bulunamadı.');
         return;
       }
       const ok = await enableBiometric();
@@ -150,6 +150,15 @@ export default function ProfileScreen() {
             </View>
             <Switch value={biometricEnabled} onValueChange={onToggleBiometric} />
           </View>
+          {biometricEnabled ? (
+            <Button
+              title="Şimdi kilitle"
+              variant="secondary"
+              icon="lock-closed-outline"
+              onPress={lock}
+              style={{ marginTop: 12 }}
+            />
+          ) : null}
         </Card>
 
         {/* Parola değiştirme */}
