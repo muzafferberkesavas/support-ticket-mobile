@@ -5,9 +5,15 @@ import { getToken } from '@/auth/secureStore';
 
 // Web ile aynı Socket.IO sunucusuna bağlanır (backend/src/realtime/socket.ts).
 // JWT, web'deki gibi handshake `auth` payload'ı ile gönderilir (header değil).
-// API_URL mobilde bir origin'dir (yol öneki içermez) → path varsayılan '/socket.io'.
-export const socket: Socket = io(API_URL, {
-  path: '/socket.io',
+// API_URL bir yol öneki içerebilir (ör. k3s ingress'te http://192.168.64.3/api).
+// Bu durumda origin ile öneki ayırıp Socket.IO path'ini "<önek>/socket.io" yaparız;
+// öneksiz (docker http://host:3100) durumda path varsayılan "/socket.io" olur.
+const _m = API_URL.match(/^(https?:\/\/[^/]+)(\/.*)?$/);
+const SOCKET_ORIGIN = _m ? _m[1] : API_URL;
+const SOCKET_PATH = `${_m && _m[2] ? _m[2].replace(/\/+$/, '') : ''}/socket.io`;
+
+export const socket: Socket = io(SOCKET_ORIGIN, {
+  path: SOCKET_PATH,
   autoConnect: false,
   transports: ['websocket', 'polling'],
   auth: (cb) => {
