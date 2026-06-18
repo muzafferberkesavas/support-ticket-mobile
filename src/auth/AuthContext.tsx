@@ -3,6 +3,7 @@ import * as authApi from '@/api/auth';
 import { setUnauthorizedHandler } from '@/api/client';
 import type { User } from '@/types';
 import { authenticateBiometric, getBiometricCapability } from './biometrics';
+import { isAdminRole, isManagerRole, isStaffRole } from './roles';
 import {
   clearToken,
   getToken,
@@ -20,6 +21,9 @@ type Status = 'loading' | 'noauth' | 'locked' | 'ready';
 interface AuthState {
   status: Status;
   user: User | null;
+  isStaff: boolean;
+  isManager: boolean;
+  isAdmin: boolean;
   biometricLabel: string;
   biometricEnabled: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -128,6 +132,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         status,
         user,
+        isStaff: isStaffRole(user?.role),
+        isManager: isManagerRole(user?.role),
+        isAdmin: isAdminRole(user?.role),
         biometricLabel,
         biometricEnabled,
         login,

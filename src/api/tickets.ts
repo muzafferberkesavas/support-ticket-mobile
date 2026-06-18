@@ -16,6 +16,7 @@ export async function listTickets(filters: TicketFilters = {}): Promise<Ticket[]
   if (filters.scope) params.scope = filters.scope;
   if (filters.search) params.search = filters.search;
   if (filters.tag) params.tag = filters.tag;
+  if (filters.departmentId) params.departmentId = filters.departmentId;
   const { data } = await api.get<{ tickets: Ticket[] }>('/tickets', { params });
   return data.tickets;
 }
@@ -39,9 +40,21 @@ export async function deleteTicket(id: string): Promise<void> {
   await api.delete(`/tickets/${id}`);
 }
 
-export async function addReply(id: string, message: string): Promise<TicketReply> {
-  const { data } = await api.post<{ reply: TicketReply }>(`/tickets/${id}/replies`, { message });
+export async function addReply(id: string, message: string, isInternal = false): Promise<TicketReply> {
+  const { data } = await api.post<{ reply: TicketReply }>(`/tickets/${id}/replies`, { message, isInternal });
   return data.reply;
+}
+
+// Personel: talebi temsilcilere ata. PATCH /tickets/:id/assign (requireStaff).
+export async function assignTicket(id: string, assigneeIds: string[]): Promise<Ticket> {
+  const { data } = await api.patch<{ ticket: Ticket }>(`/tickets/${id}/assign`, { assigneeIds });
+  return data.ticket;
+}
+
+// Personel: talebi yükselt (escalate). PATCH /tickets/:id/escalate (requireStaff).
+export async function escalateTicket(id: string, reason = 'manual'): Promise<Ticket> {
+  const { data } = await api.patch<{ ticket: Ticket }>(`/tickets/${id}/escalate`, { reason });
+  return data.ticket;
 }
 
 export async function reopenTicket(id: string): Promise<Ticket> {

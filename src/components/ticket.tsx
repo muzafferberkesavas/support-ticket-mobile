@@ -26,18 +26,29 @@ export function TicketCard({
   ticket,
   onPress,
   distanceKm,
+  showRequester,
 }: {
   ticket: Ticket;
   onPress: () => void;
   distanceKm?: number | null;
+  showRequester?: boolean;
 }) {
   const replyCount = ticket._count?.replies ?? ticket.replies?.length ?? 0;
+  const assignees = ticket.assignees ?? [];
+  const requesterName = ticket.user?.fullName || ticket.user?.email;
+  const assigneeLabel = assignees.length
+    ? assignees
+        .slice(0, 2)
+        .map((a) => a.user.fullName || a.user.email)
+        .join(', ') + (assignees.length > 2 ? ` +${assignees.length - 2}` : '')
+    : 'Atanmamış';
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
       <View style={styles.badgeRow}>
         <StatusBadge status={ticket.status} />
         <PriorityBadge priority={ticket.priority} />
         <SlaBadge ticket={ticket} />
+        {ticket.escalated ? <Badge label="Yükseltildi" fg="#b91c1c" bg="#fee2e2" /> : null}
       </View>
       <View style={styles.subjectRow}>
         <Text style={styles.subject} numberOfLines={1}>
@@ -48,6 +59,20 @@ export function TicketCard({
       <Text style={styles.message} numberOfLines={2}>
         {ticket.message}
       </Text>
+      {showRequester ? (
+        <View style={styles.staffRow}>
+          <View style={styles.footerItem}>
+            <Icon name="person-outline" size={13} color={colors.textMuted} />
+            <Text style={styles.meta} numberOfLines={1}>{requesterName ?? '—'}</Text>
+          </View>
+          <View style={styles.footerItem}>
+            <Icon name="people-outline" size={13} color={assignees.length ? colors.primary : colors.textMuted} />
+            <Text style={[styles.meta, !assignees.length && { color: colors.warn }]} numberOfLines={1}>
+              {assigneeLabel}
+            </Text>
+          </View>
+        </View>
+      ) : null}
       <View style={styles.footer}>
         <View style={styles.footerItem}>
           <Icon name="time-outline" size={13} color={colors.textMuted} />
@@ -89,6 +114,14 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  staffRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
   subjectRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   subject: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.text },
   message: { fontSize: 14, color: colors.textMuted, marginTop: 5, lineHeight: 20 },

@@ -8,9 +8,10 @@ import { extractErrorMessage } from '@/api/client';
 import { Banner, EmptyState } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 import { TicketCard } from '@/components/ticket';
+import { useAuth } from '@/auth/AuthContext';
 import { captureLocation, haversineKm, parseGeo } from '@/features/geo';
 import { colors, shadow, PRIORITY_META, PRIORITY_VALUES, STATUS_META, STATUS_VALUES } from '@/theme';
-import type { Priority, Status, TicketFilters } from '@/types';
+import type { Priority, Status, TicketFilters, TicketScope } from '@/types';
 
 function Chip({
   label,
@@ -33,17 +34,30 @@ function Chip({
   );
 }
 
+const SCOPE_OPTIONS: { value: TicketScope; label: string }[] = [
+  { value: 'all', label: 'Tümü' },
+  { value: 'mine', label: 'Bana' },
+  { value: 'unassigned', label: 'Atanmamış' },
+];
+
 export default function TicketsScreen() {
   const router = useRouter();
+  const { isStaff } = useAuth();
   const [status, setStatus] = useState<Status | undefined>();
   const [priority, setPriority] = useState<Priority | undefined>();
+  const [scope, setScope] = useState<TicketScope>('all');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [nearby, setNearby] = useState(false);
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyBusy, setNearbyBusy] = useState(false);
 
-  const filters: TicketFilters = { status, priority, search: search || undefined };
+  const filters: TicketFilters = {
+    status,
+    priority,
+    search: search || undefined,
+    scope: isStaff ? scope : undefined,
+  };
   const query = useQuery({
     queryKey: ['tickets', filters],
     queryFn: () => listTickets(filters),
@@ -111,6 +125,12 @@ export default function TicketsScreen() {
         style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
+        {isStaff
+          ? SCOPE_OPTIONS.map((o) => (
+              <Chip key={o.value} label={o.label} active={scope === o.value} onPress={() => setScope(o.value)} />
+            ))
+          : null}
+        {isStaff ? <View style={styles.divider} /> : null}
         {STATUS_VALUES.map((s) => (
           <Chip
             key={s}
@@ -141,6 +161,7 @@ export default function TicketsScreen() {
           <TicketCard
             ticket={item.t}
             distanceKm={item.d}
+            showRequester={isStaff}
             onPress={() => router.push(`/ticket/${item.t.id}`)}
           />
         )}

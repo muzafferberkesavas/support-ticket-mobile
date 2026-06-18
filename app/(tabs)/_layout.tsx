@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { GradientHeader } from '@/components/GradientHeader';
 import { Icon } from '@/components/Icon';
+import { useAuth } from '@/auth/AuthContext';
 import { useSocketConnected } from '@/realtime/socket';
 import { colors } from '@/theme';
 
@@ -21,6 +22,7 @@ function HomeHeaderRight() {
 }
 
 export default function TabsLayout() {
+  const { isStaff } = useAuth();
   return (
     <Tabs
       screenOptions={{
@@ -34,9 +36,19 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Pano',
+          tabBarLabel: 'Pano',
+          tabBarIcon: ({ color, size }) => <Icon name="speedometer-outline" size={size} color={color} />,
+          // Yalnızca personel görür; son kullanıcıda sekme gizlenir.
+          href: isStaff ? '/dashboard' : null,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
-          title: 'Taleplerim',
+          title: isStaff ? 'Talepler' : 'Taleplerim',
           tabBarLabel: 'Talepler',
           tabBarIcon: ({ color, size }) => <Icon name="reader-outline" size={size} color={color} />,
           headerRight: () => <HomeHeaderRight />,

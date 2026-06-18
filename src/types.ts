@@ -92,6 +92,23 @@ export interface TicketFilters {
   scope?: TicketScope;
   search?: string;
   tag?: string;
+  departmentId?: string;
+}
+
+export interface Department {
+  id: string;
+  name: string;
+  description?: string | null;
+  members?: PublicUser[];
+  _count?: { tickets?: number; members?: number };
+}
+
+// GET /dashboard (personel) — KPI sayıları + hızlı listeler.
+export interface DashboardData {
+  counts: { myOpen: number; slaRisk: number; unassigned: number; resolvedToday: number };
+  myOpen: Ticket[];
+  slaRisk: Ticket[];
+  unassigned: Ticket[];
 }
 
 export interface CreateTicketPayload {
@@ -108,4 +125,7 @@ export interface UpdateTicketPayload {
   priority?: Priority;
   category?: string | null;
   tags?: string[];
+  // Personel alanları (backend yalnızca staff'a izin verir).
+  status?: Status;
+  departmentId?: string | null;
 }
