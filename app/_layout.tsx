@@ -20,10 +20,13 @@ import { ToastProvider } from '@/components/Toast';
 import { GradientHeader } from '@/components/GradientHeader';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { applyInterFont } from '@/theme/fonts';
+import { configureNotifications } from '@/features/push';
 import { colors } from '@/theme';
 
 // Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
 applyInterFont();
+// Uygulama açıkken de bildirim banner'ı göster.
+configureNotifications();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15_000 } },
@@ -85,6 +88,7 @@ function RootNavigator() {
           <Stack.Screen name="admin/canned" options={{ title: 'Hazır Yanıtlar' }} />
           <Stack.Screen name="admin/operations" options={{ title: 'Operasyonlar' }} />
           <Stack.Screen name="notifications" options={{ title: 'Bildirimler' }} />
+          <Stack.Screen name="features" options={{ title: 'Mobil Özellikler' }} />
         </Stack.Protected>
       </Stack>
 

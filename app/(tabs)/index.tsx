@@ -266,8 +266,8 @@ const styles = StyleSheet.create({
     ...shadow.sm,
   },
   search: { flex: 1, paddingVertical: 13, fontSize: 15, color: colors.text },
-  filterScroll: { maxHeight: 44, marginBottom: 4 },
-  filterRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
+  filterScroll: { flexGrow: 0, marginBottom: 6 },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 6, gap: 8, alignItems: 'center' },
   divider: { width: 1, height: 22, backgroundColor: colors.border, marginHorizontal: 2 },
   chip: {
     paddingHorizontal: 14,

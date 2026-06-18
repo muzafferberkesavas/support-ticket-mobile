@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { Banner, Button, Card, TextField } from '@/components/ui';
 import { Icon } from '@/components/Icon';
@@ -17,6 +18,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, setUser, logout, biometricEnabled, enableBiometric, disableBiometric, biometricLabel } = useAuth();
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
@@ -72,6 +74,20 @@ export default function ProfileScreen() {
           <Text style={styles.fieldLabel}>Rol</Text>
           <Text style={styles.readonly}>{ROLE_LABELS[user?.role ?? 'user'] ?? user?.role}</Text>
         </Card>
+
+        {/* Mobil özellikler vitrini */}
+        <Pressable onPress={() => router.push('/features')}>
+          <Card style={styles.card}>
+            <View style={styles.featuresRow}>
+              <Icon name="sparkles" size={20} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.switchLabel}>Mobil Özellikler</Text>
+                <Text style={styles.switchHint}>Eklenen 9 cihaz yeteneği + push testi</Text>
+              </View>
+              <Icon name="chevron-forward" size={18} color={colors.textMuted} />
+            </View>
+          </Card>
+        </Pressable>
 
         {/* Profil düzenleme */}
         <Card style={styles.card}>
@@ -148,6 +164,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginTop: 8 },
   readonly: { fontSize: 15, color: colors.text, marginTop: 2 },
+  featuresRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   switchLabel: { fontSize: 15, fontWeight: '600', color: colors.text },
   switchHint: { fontSize: 13, color: colors.textMuted, marginTop: 2 },

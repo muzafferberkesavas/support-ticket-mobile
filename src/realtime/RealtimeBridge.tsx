@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { socket, connectSocket, disconnectSocket } from './socket';
+import { ensureNotificationPermission, presentLocalNotification } from '@/features/push';
 import { useToast } from '@/components/Toast';
 
 // Backend'in bildirim payload'ı: { type, ticketId, ticketSubject, ... }
@@ -28,6 +29,7 @@ export function RealtimeBridge() {
 
   useEffect(() => {
     connectSocket();
+    void ensureNotificationPermission();
 
     const invalidateList = () => void qc.invalidateQueries({ queryKey: ['tickets'] });
     const onUpdated = (p: { ticket?: { id?: string } }) => {
@@ -37,12 +39,13 @@ export function RealtimeBridge() {
     const onNotification = (n: NotificationPayload) => {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       void qc.invalidateQueries({ queryKey: ['tickets'] });
+      void qc.invalidateQueries({ queryKey: ['unread-count'] });
+      void qc.invalidateQueries({ queryKey: ['notifications'] });
       if (n.ticketId) void qc.invalidateQueries({ queryKey: ['ticket', n.ticketId] });
-      const make = NOTIF_TEXT[n.type] ?? ((s: string) => `«${s}» güncellendi`);
-      toast({
-        text: make(n.ticketSubject || 'Talep'),
-        onPress: n.ticketId ? () => router.push(`/ticket/${n.ticketId}`) : undefined,
-      });
+      const text = (NOTIF_TEXT[n.type] ?? ((s: string) => `«${s}» güncellendi`))(n.ticketSubject || 'Talep');
+      // Uygulama içi toast + cihaz bildirimi (push).
+      toast({ text, onPress: n.ticketId ? () => router.push(`/ticket/${n.ticketId}`) : undefined });
+      void presentLocalNotification('Destek Mobil', text, { ticketId: n.ticketId });
     };
 
     socket.on('ticket:created', invalidateList);
