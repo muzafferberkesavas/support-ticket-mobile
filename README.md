@@ -34,7 +34,7 @@ Mobil uygulama, web arayüzündeki son kullanıcı (rol: `user`) akışını bir
 
 ## Mobile özgü özellikler
 
-Görevin zorunlu kıldığı cihaz yeteneklerinden **iki tanesi** anlamlı biçimde akışa entegre edilmiştir:
+Görevin zorunlu kıldığı cihaz yeteneklerinden **beş tanesi** anlamlı biçimde akışa entegre edilmiştir (kamera/biyometri + QR tarama + GPS/konum + hareket sensörü):
 
 ### 1. Biyometrik kimlik doğrulama (Face ID / Touch ID / parmak izi)
 - JWT, `expo-secure-store` ile cihazın **donanım destekli güvenli deposunda** (iOS Keychain / Android Keystore) tutulur — düz metin `AsyncStorage` kullanılmaz.
@@ -48,6 +48,21 @@ Görevin zorunlu kıldığı cihaz yeteneklerinden **iki tanesi** anlamlı biçi
 - Başarılı işlemlerde dokunsal geri bildirim için `expo-haptics` kullanılır.
 - İlgili kod: `app/ticket/[id].tsx`, `src/api/tickets.ts` (`uploadAttachment`).
 
+### 3. Varlık QR / barkod tarama ile hızlı talep (`expo-camera`)
+- Talep listesindeki **📷** ile kamera açılır; bir varlık/ekipman QR'ı veya barkodu (QR, EAN, Code128/39, PDF417, DataMatrix) taranır.
+- Kod düz metin (varlık kodu) veya JSON (`{ asset, category, subject }`) olabilir; okunan değer **Yeni Talep** ekranını otomatik doldurur (konu + kategori + `varlik:<kod>` etiketi). Okuma anında haptik geri bildirim verilir.
+- Yeni backend gerektirmez — mevcut `POST /tickets` alanlarını (konu/kategori/etiket) doldurur.
+- İlgili kod: `app/scan.tsx`, `app/new.tsx` (ön-doldurma).
+
+### 4. Konum etiketli talepler + “Yakındakiler” filtresi (`expo-location`)
+- Yeni talepte **📍 Konumu Ekle** ile GPS konumu alınır ve **ters jeokodlama** ile okunabilir adrese çevrilir; konum, talebe yapısal bir `geo:<lat,lng>` etiketi + mesaja okunabilir satır olarak işlenir (backend şeması değişmez).
+- Listede **📍 Yakındakiler** filtresi, konum etiketli talepleri mevcut konuma olan **mesafeye göre** sıralar/filtreler; kartlarda mesafe (ör. `📍 1.2 km`) gösterilir.
+- İlgili kod: `src/features/geo.ts`, `src/components/TicketForm.tsx`, `app/index.tsx`, `src/components/ticket.tsx`.
+
+### 5. Salla-bildir (hareket sensörü · `expo-sensors`)
+- Oturum açıkken cihaz **sallandığında** doğrudan **Yeni Talep** ekranı açılır (ivmeölçer eşiği + tekrar tetiklemeyi önleyen bekleme); haptik geri bildirim verilir.
+- İlgili kod: `src/features/useShake.ts`, `app/_layout.tsx` (`ShakeReporter`).
+
 ## Teknolojiler
 
 - **React Native 0.85 + Expo SDK 56 + TypeScript**
@@ -55,6 +70,7 @@ Görevin zorunlu kıldığı cihaz yeteneklerinden **iki tanesi** anlamlı biçi
 - **@tanstack/react-query** (sunucu durumu, önbellek, yeniden çekme)
 - **axios** (JWT interceptor'lı API istemcisi)
 - **expo-secure-store** · **expo-local-authentication** · **expo-image-picker** · **expo-haptics**
+- **expo-camera** (QR/barkod tarama) · **expo-location** (GPS + ters jeokodlama) · **expo-sensors** (salla-bildir)
 
 ## Önkoşullar (Backend)
 
