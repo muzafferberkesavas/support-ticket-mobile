@@ -4,6 +4,8 @@
 
 Mobil uygulama, web arayüzündeki son kullanıcı (rol: `user`) akışını birebir taşır: kayıt olma, giriş yapma, taleplerini listeleme/filtreleme, oluşturma, düzenleme, silme, yanıtlama, kapalı talebi yeniden açma ve puanlama (CSAT). Kullanıcı **yalnızca kendi taleplerini** görür.
 
+Bunun ötesinde, web panelinin **personel/admin** özellikleri de role göre mobile taşınmıştır: pano (KPI'lar), **analitik** (Claude ile tekrar-eden-problem içgörüsü + öneriler), kullanıcı & departman yönetimi, SLA ayarları, operasyonlar (iş kuyruğu + dışa aktarım), hazır yanıtlar, bildirim merkezi; talep detayında atama/durum/yükseltme/dahili not ve listede toplu işlemler. Uygulama ayrıca **karanlık mod** (Profil → Görünüm: Sistem/Açık/Koyu) ve **gerçek zamanlı** güncelleme içerir. Backend **Kubernetes (k3s)** üzerinde çalışır; ayrıntı için web reposuna bakın.
+
 ## İçindekiler
 
 - [Özellikler](#özellikler)
@@ -30,38 +32,37 @@ Mobil uygulama, web arayüzündeki son kullanıcı (rol: `user`) akışını bir
 | Yanıtlama | Talep konuşmasına mesaj ekleme |
 | Yeniden açma | Kapalı bir talebi yeniden açma |
 | CSAT | Kapalı talebi 1–5 yıldız ile bir kez puanlama |
+| Sesli not | Talebe mikrofonla ses kaydı ekleme (ek olarak yüklenir) |
+| Gerçek zamanlı | Liste/detay canlı senkron + "yazıyor / görüntülüyor" göstergeleri |
+| Çevrimdışı kuyruk | Çevrimdışı oluşturulan talepler kuyruğa alınıp bağlanınca senkronlanır |
+| Bildirim merkezi | Uygulama-içi bildirim listesi + okunmamış rozeti |
+| Personel / Admin | Rol-gateli pano, analitik (Claude), kullanıcı/departman, SLA, operasyonlar, atama/durum/dahili not, toplu işlem |
+| Karanlık mod | Profil → Görünüm: Sistem / Açık / Koyu |
 | Profil | Ad güncelleme, parola değiştirme, çıkış |
 
 ## Mobile özgü özellikler
 
-Görevin zorunlu kıldığı cihaz yeteneklerinden **beş tanesi** anlamlı biçimde akışa entegre edilmiştir (kamera/biyometri + QR tarama + GPS/konum + hareket sensörü):
+Görev **en az bir** mobile özgü özellik istiyordu; akışa anlamlı biçimde entegre edilmiş **dört cihaz yeteneği** vardır (biyometri, kamera, ses kaydı, çevrimdışı kuyruk) — _"ne kadar karmaşıksa o kadar iyi"_. Profil → **Mobil Özellikler** ekranından da listelenir.
 
 ### 1. Biyometrik kimlik doğrulama (Face ID / Touch ID / parmak izi)
 - JWT, `expo-secure-store` ile cihazın **donanım destekli güvenli deposunda** (iOS Keychain / Android Keystore) tutulur — düz metin `AsyncStorage` kullanılmaz.
-- Girişten sonra cihaz destekliyorsa biyometrik giriş etkinleştirilebilir (Profil ekranından da açılıp kapatılabilir).
-- Etkinleştirildiğinde uygulama her açılışta **kilit ekranı** gösterir; token bellekte ancak `expo-local-authentication` ile başarılı doğrulama sonrası kullanılır. Doğrulama cihaz parolasına geri düşebilir (fallback).
+- Profil → Güvenlik'ten biyometrik giriş açılıp kapatılır. Etkinken uygulama açılışta **kilit ekranı** gösterir; token yalnızca `expo-local-authentication` ile başarılı doğrulama sonrası kullanılır (cihaz parolasına fallback). Profil'deki **"Şimdi kilitle"** ile anında kilit denenebilir.
 - İlgili kod: `src/auth/biometrics.ts`, `src/auth/secureStore.ts`, `src/auth/AuthContext.tsx`, `app/lock.tsx`.
 
 ### 2. Kamera / galeri ile görsel ekleme
-- Talep detayında **📷 Görsel ekle** ile kameradan fotoğraf çekilebilir veya galeriden seçilebilir (`expo-image-picker`), izinler çalışma anında istenir.
+- Talep detayında **Görsel** ile kameradan fotoğraf çekilir veya galeriden seçilir (`expo-image-picker`); izinler çalışma anında istenir.
 - Görsel, mevcut `POST /tickets/:id/attachments` (multipart) uç noktasına yüklenir.
-- Başarılı işlemlerde dokunsal geri bildirim için `expo-haptics` kullanılır.
 - İlgili kod: `app/ticket/[id].tsx`, `src/api/tickets.ts` (`uploadAttachment`).
 
-### 3. Varlık QR / barkod tarama ile hızlı talep (`expo-camera`)
-- Talep listesindeki **📷** ile kamera açılır; bir varlık/ekipman QR'ı veya barkodu (QR, EAN, Code128/39, PDF417, DataMatrix) taranır.
-- Kod düz metin (varlık kodu) veya JSON (`{ asset, category, subject }`) olabilir; okunan değer **Yeni Talep** ekranını otomatik doldurur (konu + kategori + `varlik:<kod>` etiketi). Okuma anında haptik geri bildirim verilir.
-- Yeni backend gerektirmez — mevcut `POST /tickets` alanlarını (konu/kategori/etiket) doldurur.
-- İlgili kod: `app/scan.tsx`, `app/new.tsx` (ön-doldurma).
+### 3. Sesli not / ses kaydı (`expo-audio`)
+- Talep detayındaki **Ekler** bölümünde **Ses kaydı** ile mikrofondan sesli not kaydedilir; durdurulunca dosya (m4a) talebe **ek olarak yüklenir** ve file-service/DB'de saklanır — sorunu yazmak yerine anlatabilirsiniz.
+- Yeni backend gerektirmez; mevcut ek-yükleme uç noktası kullanılır (backend, ses mime tiplerine izin verecek şekilde güncellendi).
+- İlgili kod: `src/components/VoiceRecorder.tsx`, `app/ticket/[id].tsx`.
 
-### 4. Konum etiketli talepler + “Yakındakiler” filtresi (`expo-location`)
-- Yeni talepte **📍 Konumu Ekle** ile GPS konumu alınır ve **ters jeokodlama** ile okunabilir adrese çevrilir; konum, talebe yapısal bir `geo:<lat,lng>` etiketi + mesaja okunabilir satır olarak işlenir (backend şeması değişmez).
-- Listede **📍 Yakındakiler** filtresi, konum etiketli talepleri mevcut konuma olan **mesafeye göre** sıralar/filtreler; kartlarda mesafe (ör. `📍 1.2 km`) gösterilir.
-- İlgili kod: `src/features/geo.ts`, `src/components/TicketForm.tsx`, `app/index.tsx`, `src/components/ticket.tsx`.
-
-### 5. Salla-bildir (hareket sensörü · `expo-sensors`)
-- Oturum açıkken cihaz **sallandığında** doğrudan **Yeni Talep** ekranı açılır (ivmeölçer eşiği + tekrar tetiklemeyi önleyen bekleme); haptik geri bildirim verilir.
-- İlgili kod: `src/features/useShake.ts`, `app/_layout.tsx` (`ShakeReporter`).
+### 4. Çevrimdışı-öncelikli kuyruk + senkron (`expo-network` + `AsyncStorage`)
+- İnternet yokken oluşturulan talepler yerelde (`@react-native-async-storage/async-storage`) **kuyruğa alınır**; bağlantı geldiğinde `expo-network` dinleyicisi kuyruğu mevcut `POST /tickets` ile **otomatik senkronlar**.
+- Talep listesinde **çevrimdışı / senkronlanıyor** göstergesi (kuyruk sayısıyla) gösterilir.
+- İlgili kod: `src/offline/OfflineContext.tsx`, `app/(tabs)/new.tsx`, `app/(tabs)/index.tsx`.
 
 ## Teknolojiler
 
@@ -69,8 +70,9 @@ Görevin zorunlu kıldığı cihaz yeteneklerinden **beş tanesi** anlamlı biç
 - **expo-router** (dosya tabanlı navigasyon)
 - **@tanstack/react-query** (sunucu durumu, önbellek, yeniden çekme)
 - **axios** (JWT interceptor'lı API istemcisi)
-- **expo-secure-store** · **expo-local-authentication** · **expo-image-picker** · **expo-haptics**
-- **expo-camera** (QR/barkod tarama) · **expo-location** (GPS + ters jeokodlama) · **expo-sensors** (salla-bildir)
+- **socket.io-client** (gerçek zamanlı: liste/detay senkron + "yazıyor/görüntülüyor")
+- **expo-secure-store** · **expo-local-authentication** (biyometri) · **expo-image-picker** (görsel ek)
+- **expo-audio** (sesli not) · **expo-network** + **@react-native-async-storage/async-storage** (çevrimdışı kuyruk)
 
 ## Önkoşullar (Backend)
 
@@ -145,22 +147,22 @@ Eşleme `src/theme/index.ts` içinde tanımlıdır.
 
 ```
 app/                      # expo-router rotaları
-  _layout.tsx             # Provider'lar + auth durumuna göre Stack.Protected yönlendirme
-  login.tsx               # Giriş (+ biyometrik giriş önerisi)
-  register.tsx            # Kayıt
-  lock.tsx                # Biyometrik kilit ekranı
-  index.tsx               # Talep listesi + filtre/arama
-  new.tsx                 # Yeni talep
-  ticket/[id].tsx         # Talep detayı (yanıt, yeniden aç, CSAT, görsel ekle)
+  _layout.tsx             # Provider'lar (Auth/Offline/Toast/Query) + Stack.Protected yönlendirme + tema kapısı
+  login.tsx · register.tsx · lock.tsx   # Giriş / Kayıt / Biyometrik kilit ekranı
+  (tabs)/                 # Alt sekmeler: dashboard (Pano), index (Talepler), new (Yeni), admin (Yönetim), profile
+  ticket/[id].tsx         # Talep detayı (yanıt, atama/durum/yükselt, dahili not, görsel + sesli not ekle, CSAT)
   edit/[id].tsx           # Talebi düzenle
-  profile.tsx             # Profil, güvenlik (biyometri), parola, çıkış
+  admin/                  # users, departments, analytics, sla, canned, operations (rol-gateli)
+  notifications.tsx       # Bildirim merkezi
+  features.tsx            # Mobil Özellikler vitrini
 src/
-  api/                    # client.ts (axios+interceptor), auth.ts, tickets.ts
-  auth/                   # AuthContext, secureStore (JWT), biometrics
-  components/             # ui.tsx, ticket.tsx (rozetler/kart), TicketForm.tsx
-  theme/                  # renkler + priority/status/SLA eşlemeleri
-  types.ts                # backend ile uyumlu tipler
-  config.ts               # API adresi + depolama anahtarları
+  api/                    # client (axios+interceptor) + tickets/users/departments/analytics/sla/canned/operations/notifications/dashboard
+  auth/                   # AuthContext, secureStore (JWT), biometrics, roles
+  offline/                # OfflineContext — çevrimdışı kuyruk + senkron
+  components/             # ui, ticket (rozet/kart), TicketForm, VoiceRecorder, SelectList, GradientHeader, Toast …
+  realtime/               # socket.io istemcisi + RealtimeBridge
+  theme/                  # açık/koyu palet + priority/status/SLA eşlemeleri + tema tercihi (pref)
+  types.ts · config.ts    # backend ile uyumlu tipler · API adresi + anahtarlar
 ```
 
 ## Kullanılan API Uç Noktaları
@@ -180,7 +182,9 @@ src/
 | POST | `/tickets/:id/replies` | Yanıt ekle |
 | POST | `/tickets/:id/reopen` | Yeniden aç |
 | POST | `/tickets/:id/csat` | Puanla |
-| POST | `/tickets/:id/attachments` | Görsel ekle (multipart) |
+| POST | `/tickets/:id/attachments` | Görsel **ve sesli not** ekle (multipart) |
+
+Personel/admin ekranları ayrıca şu mevcut uç noktaları kullanır (yeni backend yok): `/dashboard`, `/analytics`, `/users`, `/departments`, `/sla`, `/jobs/*`, `/canned`, `/notifications`, `/tickets/:id/assign`, `/tickets/:id/escalate`, `/tickets/bulk`. Gerçek zamanlı olaylar Socket.IO ile alınır.
 
 ---
 
