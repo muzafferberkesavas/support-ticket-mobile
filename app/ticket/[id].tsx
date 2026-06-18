@@ -16,7 +16,6 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
 import {
   addReply,
   assignTicket,
@@ -36,6 +35,7 @@ import { isStaffRole, ROLE_LABELS } from '@/auth/roles';
 import { Badge, Banner, Button, Card, TextField } from '@/components/ui';
 import { PriorityBadge, SlaBadge, StatusBadge } from '@/components/ticket';
 import { Icon } from '@/components/Icon';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { socket } from '@/realtime/socket';
 import { colors, formatDateTime, STATUS_META, STATUS_VALUES } from '@/theme';
 
@@ -87,7 +87,6 @@ export default function TicketDetailScreen() {
     socket.emit('ticket:subscribe', id);
     const onReply = (p: { ticketId: string }) => {
       if (p?.ticketId === id) {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         void qc.invalidateQueries({ queryKey: ['ticket', id] });
       }
     };
@@ -141,7 +140,6 @@ export default function TicketDetailScreen() {
     onSuccess: async () => {
       setReply('');
       setIsInternal(false);
-      void Haptics.selectionAsync();
       await refresh();
     },
     onError: (e) => setError(extractErrorMessage(e, 'Yanıt gönderilemedi.')),
@@ -151,7 +149,6 @@ export default function TicketDetailScreen() {
   const statusMut = useMutation({
     mutationFn: (status: typeof STATUS_VALUES[number]) => updateTicket(id, { status }),
     onSuccess: async () => {
-      void Haptics.selectionAsync();
       await refresh();
     },
     onError: (e) => Alert.alert('Hata', extractErrorMessage(e)),
@@ -162,7 +159,6 @@ export default function TicketDetailScreen() {
     mutationFn: () => assignTicket(id, assignSel),
     onSuccess: async () => {
       setAssignOpen(false);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await refresh();
     },
     onError: (e) => Alert.alert('Hata', extractErrorMessage(e)),
@@ -172,7 +168,6 @@ export default function TicketDetailScreen() {
   const escalateMut = useMutation({
     mutationFn: () => escalateTicket(id),
     onSuccess: async () => {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       await refresh();
     },
     onError: (e) => Alert.alert('Hata', extractErrorMessage(e)),
@@ -199,7 +194,6 @@ export default function TicketDetailScreen() {
   const csatMut = useMutation({
     mutationFn: (rating: number) => submitCsat(id, rating),
     onSuccess: async () => {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await refresh();
     },
     onError: (e) => Alert.alert('Hata', extractErrorMessage(e)),
@@ -217,7 +211,6 @@ export default function TicketDetailScreen() {
   const uploadMut = useMutation({
     mutationFn: (file: { uri: string; name: string; type: string }) => uploadAttachment(id, file),
     onSuccess: async () => {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await refresh();
     },
     onError: (e) => Alert.alert('Yükleme hatası', extractErrorMessage(e)),
@@ -425,10 +418,13 @@ export default function TicketDetailScreen() {
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Ekler ({t.attachments?.length ?? 0})</Text>
           {!isClosed ? (
-            <Pressable onPress={addPhoto} hitSlop={8} disabled={uploadMut.isPending} style={styles.addPhotoBtn}>
-              <Icon name="camera-outline" size={16} color={colors.primary} />
-              <Text style={styles.addPhoto}>{uploadMut.isPending ? 'Yükleniyor…' : 'Görsel ekle'}</Text>
-            </Pressable>
+            <View style={styles.attachActions}>
+              <VoiceRecorder onRecorded={(f) => uploadMut.mutate(f)} disabled={uploadMut.isPending} />
+              <Pressable onPress={addPhoto} hitSlop={8} disabled={uploadMut.isPending} style={styles.addPhotoBtn}>
+                <Icon name="camera-outline" size={16} color={colors.primary} />
+                <Text style={styles.addPhoto}>{uploadMut.isPending ? 'Yükleniyor…' : 'Görsel'}</Text>
+              </Pressable>
+            </View>
           ) : null}
         </View>
         {t.attachments && t.attachments.length > 0 ? (
@@ -436,7 +432,13 @@ export default function TicketDetailScreen() {
             <Card key={a.id} style={styles.attachment}>
               <View style={styles.attachLeft}>
                 <Icon
-                  name={a.mimeType.startsWith('image/') ? 'image-outline' : 'document-outline'}
+                  name={
+                    a.mimeType.startsWith('image/')
+                      ? 'image-outline'
+                      : a.mimeType.startsWith('audio/')
+                        ? 'musical-notes-outline'
+                        : 'document-outline'
+                  }
                   size={18}
                   color={colors.textMuted}
                 />
@@ -636,6 +638,7 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   addPhoto: { color: colors.primary, fontWeight: '700' },
   addPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  attachActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   attachLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 },
   ratedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   attachment: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingVertical: 12 },

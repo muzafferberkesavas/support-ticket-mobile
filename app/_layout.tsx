@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Appearance, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as Haptics from 'expo-haptics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -15,19 +14,16 @@ import {
   Inter_800ExtraBold,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
-import { useShake } from '@/features/useShake';
 import { ToastProvider } from '@/components/Toast';
 import { GradientHeader } from '@/components/GradientHeader';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
+import { OfflineProvider } from '@/offline/OfflineContext';
 import { applyInterFont } from '@/theme/fonts';
-import { configureNotifications } from '@/features/push';
 import { getThemePref } from '@/theme/pref';
 import { colors, isDark } from '@/theme';
 
 // Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
 applyInterFont();
-// Uygulama açıkken de bildirim banner'ı göster.
-configureNotifications();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15_000 } },
@@ -39,16 +35,6 @@ const screenOptions = {
   header: (props: any) => <GradientHeader {...props} />,
   contentStyle: { backgroundColor: colors.bg },
 };
-
-// Cihaz sallandığında hızlıca "Yeni Talep" ekranını açar (mobile özgü kısayol).
-function ShakeReporter() {
-  const router = useRouter();
-  useShake(true, () => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/new');
-  });
-  return null;
-}
 
 // Auth durumuna göre hangi ekran grubunun erişilebilir olduğunu belirler.
 function RootNavigator() {
@@ -79,7 +65,6 @@ function RootNavigator() {
         {/* Kimlik doğrulandı — alt sekmeler + modal/detay ekranları */}
         <Stack.Protected guard={status === 'ready'}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="scan" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="ticket/[id]" options={{ title: 'Talep' }} />
           <Stack.Screen name="edit/[id]" options={{ title: 'Talebi Düzenle', presentation: 'modal' }} />
           <Stack.Screen name="admin/users" options={{ title: 'Kullanıcılar' }} />
@@ -93,8 +78,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
 
-      {/* Sallama kısayolu + gerçek zamanlı bağlantı yalnızca oturum açıkken aktif */}
-      {status === 'ready' ? <ShakeReporter /> : null}
+      {/* Gerçek zamanlı bağlantı yalnızca oturum açıkken aktif */}
       {status === 'ready' ? <RealtimeBridge /> : null}
     </>
   );
@@ -142,8 +126,10 @@ export default function RootLayout() {
         <ToastProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <StatusBar style={isDark ? 'light' : 'dark'} />
-              <RootNavigator />
+              <OfflineProvider>
+                <StatusBar style={isDark ? 'light' : 'dark'} />
+                <RootNavigator />
+              </OfflineProvider>
             </AuthProvider>
           </QueryClientProvider>
         </ToastProvider>

@@ -9,7 +9,7 @@ import { getUnreadCount } from '@/api/notifications';
 import { useSocketConnected } from '@/realtime/socket';
 import { colors } from '@/theme';
 
-// Liste sekmesinin başlık sağ aksiyonları: bağlantı göstergesi + bildirim zili + QR.
+// Liste sekmesinin başlık sağ aksiyonları: bağlantı göstergesi + bildirim zili.
 function HomeHeaderRight() {
   const router = useRouter();
   const connected = useSocketConnected();
@@ -25,9 +25,6 @@ function HomeHeaderRight() {
             <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
           </View>
         ) : null}
-      </Pressable>
-      <Pressable onPress={() => router.push('/scan')} hitSlop={10}>
-        <Icon name="qr-code-outline" size={23} color="#fff" />
       </Pressable>
     </View>
   );

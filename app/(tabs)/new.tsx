@@ -1,60 +1,60 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Haptics from 'expo-haptics';
 import { TicketForm, TicketFormValues } from '@/components/TicketForm';
 import { createTicket } from '@/api/tickets';
 import { extractErrorMessage } from '@/api/client';
+import { useOffline } from '@/offline/OfflineContext';
+import { useToast } from '@/components/Toast';
 import { colors } from '@/theme';
+import type { CreateTicketPayload } from '@/types';
+
+const toPayload = (v: TicketFormValues): CreateTicketPayload => ({
+  subject: v.subject,
+  message: v.message,
+  priority: v.priority,
+  category: v.category.trim() || null,
+  tags: v.tags,
+});
 
 export default function NewTicketScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  const toast = useToast();
+  const { online, queueTicket } = useOffline();
   const [error, setError] = useState<string | null>(null);
 
-  // QR/varlık taramasından gelen ön-doldurma (app/scan.tsx → router.replace ile).
-  const params = useLocalSearchParams<{ prefillSubject?: string; prefillCategory?: string; prefillTag?: string }>();
-  const initial = useMemo(
-    () => ({
-      subject: params.prefillSubject ?? '',
-      category: params.prefillCategory ?? '',
-      tags: params.prefillTag ? [params.prefillTag] : [],
-    }),
-    [params.prefillSubject, params.prefillCategory, params.prefillTag],
-  );
-
   const mutation = useMutation({
-    mutationFn: (v: TicketFormValues) =>
-      createTicket({
-        subject: v.subject,
-        message: v.message,
-        priority: v.priority,
-        category: v.category.trim() || null,
-        tags: v.tags,
-      }),
+    mutationFn: (v: TicketFormValues) => createTicket(toPayload(v)),
     onSuccess: async (ticket) => {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await qc.invalidateQueries({ queryKey: ['tickets'] });
       router.replace(`/ticket/${ticket.id}`);
     },
     onError: (e) => setError(extractErrorMessage(e, 'Talep oluşturulamadı.')),
   });
 
+  function handleSubmit(v: TicketFormValues) {
+    setError(null);
+    // Çevrimdışıysa kuyruğa al → bağlanınca otomatik senkronlanır.
+    if (!online) {
+      void queueTicket(toPayload(v)).then(() => {
+        toast({ text: 'Çevrimdışısınız — talep kuyruğa alındı, bağlanınca gönderilecek.' });
+        router.replace('/');
+      });
+      return;
+    }
+    mutation.mutate(v);
+  }
+
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <TicketForm
-          key={`${params.prefillSubject ?? ''}|${params.prefillTag ?? ''}`}
-          initial={initial}
-          enableLocation
-          submitLabel="Talebi Oluştur"
+          submitLabel={online ? 'Talebi Oluştur' : 'Çevrimdışı Kuyruğa Al'}
           loading={mutation.isPending}
           error={error}
-          onSubmit={(v) => {
-            setError(null);
-            mutation.mutate(v);
-          }}
+          onSubmit={handleSubmit}
         />
       </ScrollView>
     </KeyboardAvoidingView>

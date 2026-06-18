@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useAuth } from '@/auth/AuthContext';
 import { getBiometricCapability } from '@/auth/biometrics';
-import { ensureNotificationPermission, notificationsAvailable, presentLocalNotification } from '@/features/push';
 import { Button, Card } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
-import { colors, shadow } from '@/theme';
+import { colors } from '@/theme';
 
 interface Feature {
   icon: IconName;
@@ -18,31 +17,7 @@ interface Feature {
 }
 
 export default function FeaturesScreen() {
-  const router = useRouter();
   const { biometricEnabled, biometricLabel, enableBiometric, disableBiometric } = useAuth();
-  const [pushBusy, setPushBusy] = useState(false);
-
-  async function testPush() {
-    setPushBusy(true);
-    try {
-      if (!notificationsAvailable()) {
-        Alert.alert(
-          'Geliştirme derlemesi gerekir',
-          'Push bildirimleri Expo Go ile çalışmaz (SDK 53+ kaldırdı). Kod hazır — geliştirme derlemesinde (dev build) tam çalışır.',
-        );
-        return;
-      }
-      const ok = await ensureNotificationPermission();
-      if (!ok) {
-        Alert.alert('İzin gerekli', 'Bildirim göndermek için bildirim izni vermelisiniz.');
-        return;
-      }
-      const sent = await presentLocalNotification('Destek Mobil', 'Push bildirimleri çalışıyor! 🎉 Bu bir test bildirimidir.', {});
-      Alert.alert(sent ? 'Gönderildi ✓' : 'Hata', sent ? 'Test bildirimi gönderildi. Bildirim çekmecesini kontrol edin.' : 'Bildirim gönderilemedi.');
-    } finally {
-      setPushBusy(false);
-    }
-  }
 
   async function toggleBiometric() {
     if (biometricEnabled) {
@@ -68,18 +43,10 @@ export default function FeaturesScreen() {
       action: { label: biometricEnabled ? 'Kapat' : 'Etkinleştir', run: () => void toggleBiometric() },
     },
     {
-      icon: 'notifications',
+      icon: 'mic',
       tone: colors.danger,
-      title: 'Push bildirimleri',
-      desc: 'Cihaz bildirimleri — yeni yanıt/atama/durum değişiminde anlık uyarı (expo-notifications).',
-      action: { label: 'Test gönder', run: () => void testPush() },
-    },
-    {
-      icon: 'qr-code',
-      tone: colors.info,
-      title: 'QR / barkod tarama',
-      desc: 'Kamerayla varlık QR’ı okunup yeni talep otomatik doldurulur (expo-camera).',
-      action: { label: 'Tara', run: () => router.push('/scan') },
+      title: 'Sesli not (ses kaydı)',
+      desc: 'Talebe sesli not kaydedip ek olarak ekleme (expo-av) — mikrofonla sorunu anlatın.',
     },
     {
       icon: 'camera',
@@ -88,28 +55,16 @@ export default function FeaturesScreen() {
       desc: 'Talebe kameradan veya galeriden fotoğraf ekleme (expo-image-picker).',
     },
     {
-      icon: 'location',
-      tone: colors.warn,
-      title: 'GPS konum + Yakındakiler',
-      desc: 'Konum etiketli talep + listede mesafeye göre filtreleme (expo-location).',
-    },
-    {
-      icon: 'phone-portrait',
-      tone: colors.primary,
-      title: 'Salla → yeni talep',
-      desc: 'Cihazı sallayınca hızlıca yeni talep ekranı açılır (expo-sensors).',
-    },
-    {
-      icon: 'pulse',
-      tone: colors.info,
-      title: 'Haptik geri bildirim',
-      desc: 'Önemli aksiyonlarda dokunsal titreşim (expo-haptics).',
-    },
-    {
       icon: 'flash',
-      tone: colors.success,
+      tone: colors.info,
       title: 'Gerçek zamanlı güncelleme',
       desc: 'Liste, detay ve “yazıyor / görüntülüyor” canlı senkron (Socket.IO).',
+    },
+    {
+      icon: 'cloud-offline',
+      tone: colors.warn,
+      title: 'Çevrimdışı-öncelikli kuyruk',
+      desc: 'İnternet yokken talepler yerelde kuyruğa alınır, bağlanınca otomatik senkronlanır.',
     },
     {
       icon: 'lock-closed',
@@ -125,7 +80,7 @@ export default function FeaturesScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.intro}>
           Görev en az <Text style={styles.bold}>1 mobile özgü özellik</Text> istiyordu. Akışa anlamlı şekilde
-          entegre edilmiş <Text style={styles.bold}>9 cihaz yeteneği</Text> ekledik:
+          entegre edilmiş mobil/cihaz yetenekleri:
         </Text>
 
         {features.map((f) => (
@@ -145,13 +100,7 @@ export default function FeaturesScreen() {
               </View>
             </View>
             {f.action ? (
-              <Button
-                title={f.action.label}
-                variant="secondary"
-                onPress={f.action.run}
-                loading={f.title === 'Push bildirimleri' && pushBusy}
-                style={styles.actionBtn}
-              />
+              <Button title={f.action.label} variant="secondary" onPress={f.action.run} style={styles.actionBtn} />
             ) : null}
           </Card>
         ))}

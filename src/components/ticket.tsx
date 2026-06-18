@@ -2,7 +2,6 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from './ui';
 import { Icon } from './Icon';
-import { formatKm } from '@/features/geo';
 import { colors, shadow, formatDateTime, PRIORITY_META, slaState, STATUS_META } from '@/theme';
 import type { Ticket } from '@/types';
 
@@ -26,7 +25,6 @@ export function TicketCard({
   ticket,
   onPress,
   onLongPress,
-  distanceKm,
   showRequester,
   selectMode,
   selected,
@@ -34,7 +32,6 @@ export function TicketCard({
   ticket: Ticket;
   onPress: () => void;
   onLongPress?: () => void;
-  distanceKm?: number | null;
   showRequester?: boolean;
   selectMode?: boolean;
   selected?: boolean;
@@ -92,12 +89,6 @@ export function TicketCard({
           <Text style={styles.meta}>{formatDateTime(ticket.createdAt)}</Text>
         </View>
         <View style={styles.footerRight}>
-          {distanceKm != null ? (
-            <View style={styles.footerItem}>
-              <Icon name="location" size={13} color={colors.success} />
-              <Text style={styles.distance}>{formatKm(distanceKm)}</Text>
-            </View>
-          ) : null}
           {ticket.category ? (
             <View style={styles.footerItem}>
               <Icon name="pricetag-outline" size={13} color={colors.textMuted} />
@@ -143,5 +134,4 @@ const styles = StyleSheet.create({
   footerRight: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   footerItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   meta: { fontSize: 12, color: colors.textMuted },
-  distance: { fontSize: 12, color: colors.success, fontWeight: '700' },
 });

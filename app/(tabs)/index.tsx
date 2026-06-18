@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,7 +9,7 @@ import { Banner, Button, EmptyState } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 import { TicketCard } from '@/components/ticket';
 import { useAuth } from '@/auth/AuthContext';
-import { captureLocation, haversineKm, parseGeo } from '@/features/geo';
+import { useOffline } from '@/offline/OfflineContext';
 import { colors, shadow, PRIORITY_META, PRIORITY_VALUES, STATUS_META, STATUS_VALUES } from '@/theme';
 import type { Priority, Status, TicketFilters, TicketScope } from '@/types';
 
@@ -43,14 +43,12 @@ const SCOPE_OPTIONS: { value: TicketScope; label: string }[] = [
 export default function TicketsScreen() {
   const router = useRouter();
   const { isStaff } = useAuth();
+  const { online, pending } = useOffline();
   const [status, setStatus] = useState<Status | undefined>();
   const [priority, setPriority] = useState<Priority | undefined>();
   const [scope, setScope] = useState<TicketScope>('all');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [nearby, setNearby] = useState(false);
-  const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
-  const [nearbyBusy, setNearbyBusy] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const qc = useQueryClient();
@@ -99,34 +97,20 @@ export default function TicketsScreen() {
 
   const tickets = query.data ?? [];
 
-  // "Yakındakiler": konum etiketli talepleri, mevcut konuma olan mesafeye göre sıralar/filtreler.
-  const displayed = useMemo(() => {
-    if (!nearby || !myLoc) return tickets.map((t) => ({ t, d: null as number | null }));
-    return tickets
-      .map((t) => {
-        const g = parseGeo(t.tags);
-        return { t, d: g ? haversineKm(myLoc, g) : null };
-      })
-      .filter((x) => x.d != null)
-      .sort((a, b) => (a.d as number) - (b.d as number));
-  }, [tickets, nearby, myLoc]);
-
-  async function toggleNearby() {
-    if (nearby) return setNearby(false);
-    setNearbyBusy(true);
-    try {
-      const loc = myLoc ?? (await captureLocation());
-      setMyLoc({ lat: loc.lat, lng: loc.lng });
-      setNearby(true);
-    } catch (e) {
-      Alert.alert('Konum', e instanceof Error ? e.message : 'Konum alınamadı.');
-    } finally {
-      setNearbyBusy(false);
-    }
-  }
-
   return (
     <View style={styles.container}>
+      {/* Çevrimdışı / kuyruk göstergesi */}
+      {!online || pending > 0 ? (
+        <View style={[styles.offlineBar, online ? styles.syncBar : null]}>
+          <Icon name={online ? 'sync' : 'cloud-offline'} size={15} color="#fff" />
+          <Text style={styles.offlineText}>
+            {!online
+              ? `Çevrimdışı${pending > 0 ? ` — ${pending} talep kuyrukta` : ''}`
+              : `${pending} talep senkronlanıyor…`}
+          </Text>
+        </View>
+      ) : null}
+
       {/* Arama */}
       <View style={styles.searchRow}>
         <Icon name="search" size={18} color={colors.textMuted} />
@@ -183,7 +167,6 @@ export default function TicketsScreen() {
           />
         ))}
         <View style={styles.divider} />
-        <Chip label={nearbyBusy ? 'Konum…' : 'Yakındakiler'} icon="location" active={nearby} onPress={toggleNearby} />
         {isStaff && !selectMode ? (
           <Chip label="Seç" icon="checkbox-outline" active={false} onPress={() => setSelectMode(true)} />
         ) : null}
@@ -192,21 +175,20 @@ export default function TicketsScreen() {
       {query.isError ? <View style={styles.pad}><Banner text={extractErrorMessage(query.error)} /></View> : null}
 
       <FlatList
-        data={displayed}
-        keyExtractor={(x) => x.t.id}
+        data={tickets}
+        keyExtractor={(t) => t.id}
         renderItem={({ item }) => (
           <TicketCard
-            ticket={item.t}
-            distanceKm={item.d}
+            ticket={item}
             showRequester={isStaff}
             selectMode={selectMode}
-            selected={selectedIds.includes(item.t.id)}
-            onPress={() => (selectMode ? toggleSelect(item.t.id) : router.push(`/ticket/${item.t.id}`))}
+            selected={selectedIds.includes(item.id)}
+            onPress={() => (selectMode ? toggleSelect(item.id) : router.push(`/ticket/${item.id}`))}
             onLongPress={
               isStaff
                 ? () => {
                     setSelectMode(true);
-                    toggleSelect(item.t.id);
+                    toggleSelect(item.id);
                   }
                 : undefined
             }
@@ -217,13 +199,11 @@ export default function TicketsScreen() {
         ListEmptyComponent={
           query.isLoading ? null : (
             <EmptyState
-              title={nearby ? 'Yakında konumlu talep yok' : 'Talep bulunamadı'}
+              title="Talep bulunamadı"
               subtitle={
-                nearby
-                  ? 'Konum etiketli talebiniz yok ya da hepsi uzakta. Yeni talepte “Konumu Ekle” ile konum ekleyebilirsiniz.'
-                  : status || priority || search
-                    ? 'Filtreleri değiştirmeyi deneyin.'
-                    : 'Sağ üstteki ＋ ile ilk talebinizi oluşturun.'
+                status || priority || search
+                  ? 'Filtreleri değiştirmeyi deneyin.'
+                  : 'Yeni sekmesinden ilk talebinizi oluşturun.'
               }
             />
           )
@@ -246,6 +226,16 @@ export default function TicketsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  offlineBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    backgroundColor: '#64748b',
+    paddingVertical: 7,
+  },
+  syncBar: { backgroundColor: colors.primary },
+  offlineText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   connDot: { width: 9, height: 9, borderRadius: 5 },
   connOn: { backgroundColor: colors.success },
