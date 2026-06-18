@@ -1,7 +1,19 @@
+import { Appearance } from 'react-native';
 import type { Priority, Status } from '@/types';
 
-// Web arayüzüyle (PrimeVue + indigo/mor marka) tutarlı renk paleti.
-export const colors = {
+// Her iki temada ortak marka/aksiyon renkleri (indigo/mor — BrandLogo gradyanı).
+const ACCENTS = {
+  primary: '#4f46e5',
+  primaryDark: '#4338ca',
+  brand1: '#6366f1',
+  brand2: '#7c3aed',
+  brand3: '#4338ca',
+  white: '#ffffff',
+};
+
+// Açık tema — web arayüzüyle (PrimeVue indigo) tutarlı.
+const light = {
+  ...ACCENTS,
   bg: '#f3f4fb',
   surface: '#ffffff',
   surfaceAlt: '#f8f9fd',
@@ -9,14 +21,7 @@ export const colors = {
   border: '#e8eaf2',
   text: '#1f2433',
   textMuted: '#6b7280',
-  // Marka: web dashboard'daki indigo/mor (BrandLogo gradyanı ile aynı).
-  primary: '#4f46e5',
-  primaryDark: '#4338ca',
   primarySoft: '#eef2ff',
-  brand1: '#6366f1',
-  brand2: '#7c3aed',
-  brand3: '#4338ca',
-  // Severity renkleri (web ile aynı anlam).
   success: '#16a34a',
   successBg: '#dcfce7',
   info: '#2563eb',
@@ -27,8 +32,39 @@ export const colors = {
   dangerBg: '#fee2e2',
   secondary: '#64748b',
   secondaryBg: '#eef0f6',
-  white: '#ffffff',
 };
+
+// Koyu tema — web'in .app-dark moduyla aynı ruh (koyu zemin, parlak aksanlar).
+const dark: typeof light = {
+  ...ACCENTS,
+  bg: '#0e1016',
+  surface: '#181b24',
+  surfaceAlt: '#1e222d',
+  surfaceHover: '#262b38',
+  border: '#2b3140',
+  text: '#e9ebf2',
+  textMuted: '#99a1b3',
+  primarySoft: '#23263b',
+  success: '#34d399',
+  successBg: '#0f2a1e',
+  info: '#60a5fa',
+  infoBg: '#12243d',
+  warn: '#fbbf24',
+  warnBg: '#2c2410',
+  danger: '#f87171',
+  dangerBg: '#2c1618',
+  secondary: '#94a3b8',
+  secondaryBg: '#222838',
+};
+
+export type Scheme = 'light' | 'dark';
+// Aktif tema, uygulama açılışında cihaz/OS temasından belirlenir. OS teması
+// değişince RootLayout bir Appearance dinleyicisiyle uygulamayı yeniden yükler.
+export const scheme: Scheme = Appearance.getColorScheme() === 'dark' ? 'dark' : 'light';
+export const isDark = scheme === 'dark';
+
+// Tüm ekranlar bu paleti kullanır (StyleSheet'ler modül yükleminde okur).
+export const colors: typeof light = isDark ? dark : light;
 
 // Tutarlı yükselti/gölge (iOS shadow + Android elevation).
 export const shadow = {

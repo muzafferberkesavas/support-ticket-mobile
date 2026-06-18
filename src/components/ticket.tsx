@@ -61,7 +61,7 @@ export function TicketCard({
         <StatusBadge status={ticket.status} />
         <PriorityBadge priority={ticket.priority} />
         <SlaBadge ticket={ticket} />
-        {ticket.escalated ? <Badge label="Yükseltildi" fg="#b91c1c" bg="#fee2e2" /> : null}
+        {ticket.escalated ? <Badge label="Yükseltildi" fg={colors.danger} bg={colors.dangerBg} /> : null}
       </View>
       <View style={styles.subjectRow}>
         <Text style={styles.subject} numberOfLines={1}>

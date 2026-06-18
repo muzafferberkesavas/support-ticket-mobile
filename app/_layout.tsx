@@ -1,5 +1,5 @@
-import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, Appearance, DevSettings, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -21,7 +21,7 @@ import { GradientHeader } from '@/components/GradientHeader';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { applyInterFont } from '@/theme/fonts';
 import { configureNotifications } from '@/features/push';
-import { colors } from '@/theme';
+import { colors, isDark, scheme } from '@/theme';
 
 // Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
 applyInterFont();
@@ -100,6 +100,21 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  // OS teması (açık/koyu) değişince paleti uygulamak için uygulamayı yeniden yükle.
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(({ colorScheme }) => {
+      const next = colorScheme === 'dark' ? 'dark' : 'light';
+      if (next !== scheme) {
+        try {
+          DevSettings.reload();
+        } catch {
+          /* prod build'de expo-updates gerekir */
+        }
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -120,7 +135,7 @@ export default function RootLayout() {
         <ToastProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <StatusBar style="dark" />
+              <StatusBar style={isDark ? 'light' : 'dark'} />
               <RootNavigator />
             </AuthProvider>
           </QueryClientProvider>
