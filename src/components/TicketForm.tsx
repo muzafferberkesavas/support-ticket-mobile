@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Banner, Button, TextField } from './ui';
+import { captureLocation, geoTag, type Geo } from '@/features/geo';
 import { colors, PRIORITY_META, PRIORITY_VALUES } from '@/theme';
 import type { Priority } from '@/types';
 
@@ -31,17 +33,23 @@ export function TicketForm({
   submitLabel,
   loading,
   error,
+  enableLocation,
   onSubmit,
 }: {
   initial?: Partial<TicketFormValues>;
   submitLabel: string;
   loading?: boolean;
   error?: string | null;
+  enableLocation?: boolean;
   onSubmit: (v: TicketFormValues) => void;
 }) {
   const [values, setValues] = useState<TicketFormValues>({ ...EMPTY, ...initial });
   const [tagInput, setTagInput] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [geo, setGeo] = useState<Geo | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoErr, setGeoErr] = useState<string | null>(null);
+  const hasSavedGeo = (initial?.tags ?? []).some((t) => t.startsWith('geo:'));
 
   function set<K extends keyof TicketFormValues>(key: K, val: TicketFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -54,11 +62,33 @@ export function TicketForm({
     setTagInput('');
   }
 
+  async function addLocation() {
+    setGeoBusy(true);
+    setGeoErr(null);
+    try {
+      const g = await captureLocation();
+      setGeo(g);
+      void Haptics.selectionAsync();
+    } catch (e) {
+      setGeoErr(e instanceof Error ? e.message : 'Konum alınamadı.');
+    } finally {
+      setGeoBusy(false);
+    }
+  }
+
   function submit() {
     const v = validate(values);
     if (v) return setLocalError(v);
     setLocalError(null);
-    onSubmit({ ...values, subject: values.subject.trim(), message: values.message.trim() });
+    let tags = [...values.tags];
+    let message = values.message.trim();
+    if (geo) {
+      // Konumu yapısal bir etikete göm (geo:lat,lng) + okunabilir satırı mesaja ekle.
+      tags = tags.filter((t) => !t.startsWith('geo:'));
+      if (tags.length < 15) tags.push(geoTag(geo.lat, geo.lng));
+      if (!message.includes('📍 Konum:')) message = `${message}\n\n📍 Konum: ${geo.label}`.trim();
+    }
+    onSubmit({ ...values, subject: values.subject.trim(), message, tags });
   }
 
   return (
@@ -129,6 +159,29 @@ export function TicketForm({
         </View>
       ) : null}
 
+      {enableLocation ? (
+        <View style={styles.locSection}>
+          <Text style={styles.label}>Konum (isteğe bağlı)</Text>
+          {geo ? (
+            <Pressable onPress={() => setGeo(null)} style={styles.locChip}>
+              <Text style={styles.locText}>📍 {geo.label}  ✕</Text>
+            </Pressable>
+          ) : (
+            <Button
+              title={geoBusy ? 'Konum alınıyor…' : '📍 Konumu Ekle'}
+              variant="secondary"
+              loading={geoBusy}
+              onPress={addLocation}
+            />
+          )}
+          {geoErr ? (
+            <Text style={styles.geoErr}>{geoErr}</Text>
+          ) : hasSavedGeo && !geo ? (
+            <Text style={styles.savedNote}>Bu talepte kayıtlı bir konum var.</Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <Button title={submitLabel} onPress={submit} loading={loading} style={{ marginTop: 16 }} />
     </View>
   );
@@ -152,4 +205,15 @@ const styles = StyleSheet.create({
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 8 },
   tag: { backgroundColor: colors.infoBg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   tagText: { color: colors.info, fontWeight: '600', fontSize: 13 },
+  locSection: { marginTop: 6 },
+  locChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.successBg,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  locText: { color: colors.success, fontWeight: '600', fontSize: 14 },
+  geoErr: { color: colors.danger, fontSize: 12, marginTop: 6 },
+  savedNote: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
 });

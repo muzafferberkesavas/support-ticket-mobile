@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlatList } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -7,6 +7,7 @@ import { listTickets } from '@/api/tickets';
 import { extractErrorMessage } from '@/api/client';
 import { Banner, EmptyState } from '@/components/ui';
 import { TicketCard } from '@/components/ticket';
+import { captureLocation, haversineKm, parseGeo } from '@/features/geo';
 import { colors, PRIORITY_META, PRIORITY_VALUES, STATUS_META, STATUS_VALUES } from '@/theme';
 import type { Priority, Status, TicketFilters } from '@/types';
 
@@ -27,6 +28,9 @@ export default function TicketsScreen() {
   const [priority, setPriority] = useState<Priority | undefined>();
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [nearby, setNearby] = useState(false);
+  const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyBusy, setNearbyBusy] = useState(false);
 
   const filters: TicketFilters = { status, priority, search: search || undefined };
   const query = useQuery({
@@ -36,12 +40,41 @@ export default function TicketsScreen() {
 
   const tickets = query.data ?? [];
 
+  // "Yakındakiler": konum etiketli talepleri, mevcut konuma olan mesafeye göre sıralar/filtreler.
+  const displayed = useMemo(() => {
+    if (!nearby || !myLoc) return tickets.map((t) => ({ t, d: null as number | null }));
+    return tickets
+      .map((t) => {
+        const g = parseGeo(t.tags);
+        return { t, d: g ? haversineKm(myLoc, g) : null };
+      })
+      .filter((x) => x.d != null)
+      .sort((a, b) => (a.d as number) - (b.d as number));
+  }, [tickets, nearby, myLoc]);
+
+  async function toggleNearby() {
+    if (nearby) return setNearby(false);
+    setNearbyBusy(true);
+    try {
+      const loc = myLoc ?? (await captureLocation());
+      setMyLoc({ lat: loc.lat, lng: loc.lng });
+      setNearby(true);
+    } catch (e) {
+      Alert.alert('Konum', e instanceof Error ? e.message : 'Konum alınamadı.');
+    } finally {
+      setNearbyBusy(false);
+    }
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
           headerRight: () => (
             <View style={styles.headerActions}>
+              <Pressable onPress={() => router.push('/scan')} hitSlop={10}>
+                <Text style={styles.headerIcon}>📷</Text>
+              </Pressable>
               <Pressable onPress={() => router.push('/profile')} hitSlop={10}>
                 <Text style={styles.headerIcon}>👤</Text>
               </Pressable>
@@ -101,26 +134,34 @@ export default function TicketsScreen() {
             onPress={() => setPriority(priority === p ? undefined : p)}
           />
         ))}
+        <View style={styles.divider} />
+        <Chip label={nearbyBusy ? 'Konum…' : '📍 Yakındakiler'} active={nearby} onPress={toggleNearby} />
       </ScrollView>
 
       {query.isError ? <View style={styles.pad}><Banner text={extractErrorMessage(query.error)} /></View> : null}
 
       <FlatList
-        data={tickets}
-        keyExtractor={(t) => t.id}
+        data={displayed}
+        keyExtractor={(x) => x.t.id}
         renderItem={({ item }) => (
-          <TicketCard ticket={item} onPress={() => router.push(`/ticket/${item.id}`)} />
+          <TicketCard
+            ticket={item.t}
+            distanceKm={item.d}
+            onPress={() => router.push(`/ticket/${item.t.id}`)}
+          />
         )}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={query.isFetching} onRefresh={() => query.refetch()} />}
         ListEmptyComponent={
           query.isLoading ? null : (
             <EmptyState
-              title="Talep bulunamadı"
+              title={nearby ? 'Yakında konumlu talep yok' : 'Talep bulunamadı'}
               subtitle={
-                status || priority || search
-                  ? 'Filtreleri değiştirmeyi deneyin.'
-                  : 'Sağ üstteki ＋ ile ilk talebinizi oluşturun.'
+                nearby
+                  ? 'Konum etiketli talebiniz yok ya da hepsi uzakta. Yeni talepte “Konumu Ekle” ile konum ekleyebilirsiniz.'
+                  : status || priority || search
+                    ? 'Filtreleri değiştirmeyi deneyin.'
+                    : 'Sağ üstteki ＋ ile ilk talebinizi oluşturun.'
               }
             />
           )

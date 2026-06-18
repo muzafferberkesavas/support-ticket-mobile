@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { TicketForm, TicketFormValues } from '@/components/TicketForm';
@@ -12,6 +12,17 @@ export default function NewTicketScreen() {
   const router = useRouter();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+
+  // QR/varlık taramasından gelen ön-doldurma (app/scan.tsx → router.replace ile).
+  const params = useLocalSearchParams<{ prefillSubject?: string; prefillCategory?: string; prefillTag?: string }>();
+  const initial = useMemo(
+    () => ({
+      subject: params.prefillSubject ?? '',
+      category: params.prefillCategory ?? '',
+      tags: params.prefillTag ? [params.prefillTag] : [],
+    }),
+    [params.prefillSubject, params.prefillCategory, params.prefillTag],
+  );
 
   const mutation = useMutation({
     mutationFn: (v: TicketFormValues) =>
@@ -34,6 +45,8 @@ export default function NewTicketScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <TicketForm
+          initial={initial}
+          enableLocation
           submitLabel="Talebi Oluştur"
           loading={mutation.isPending}
           error={error}

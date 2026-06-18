@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from './ui';
+import { formatKm } from '@/features/geo';
 import { colors, formatDateTime, PRIORITY_META, slaState, STATUS_META } from '@/theme';
 import type { Ticket } from '@/types';
 
@@ -20,7 +21,15 @@ export function SlaBadge({ ticket }: { ticket: Ticket }) {
   return <Badge label={s.label} fg={s.tone.fg} bg={s.tone.bg} />;
 }
 
-export function TicketCard({ ticket, onPress }: { ticket: Ticket; onPress: () => void }) {
+export function TicketCard({
+  ticket,
+  onPress,
+  distanceKm,
+}: {
+  ticket: Ticket;
+  onPress: () => void;
+  distanceKm?: number | null;
+}) {
   const replyCount = ticket._count?.replies ?? ticket.replies?.length ?? 0;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
@@ -38,6 +47,7 @@ export function TicketCard({ ticket, onPress }: { ticket: Ticket; onPress: () =>
       <View style={styles.footer}>
         <Text style={styles.meta}>{formatDateTime(ticket.createdAt)}</Text>
         <View style={styles.footerRight}>
+          {distanceKm != null ? <Text style={styles.distance}>📍 {formatKm(distanceKm)}</Text> : null}
           {ticket.category ? <Text style={styles.meta}>· {ticket.category}</Text> : null}
           {replyCount > 0 ? <Text style={styles.meta}>· {replyCount} yanıt</Text> : null}
         </View>
@@ -59,6 +69,7 @@ const styles = StyleSheet.create({
   subject: { fontSize: 16, fontWeight: '700', color: colors.text },
   message: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
   footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  footerRight: { flexDirection: 'row', gap: 4 },
+  footerRight: { flexDirection: 'row', gap: 4, alignItems: 'center' },
   meta: { fontSize: 12, color: colors.textMuted },
+  distance: { fontSize: 12, color: colors.success, fontWeight: '700' },
 });

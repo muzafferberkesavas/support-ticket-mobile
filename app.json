@@ -12,8 +12,10 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSFaceIDUsageDescription": "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır.",
-        "NSCameraUsageDescription": "Destek talebinize fotoğraf eklemek için kamera kullanılır.",
-        "NSPhotoLibraryUsageDescription": "Destek talebinize galeriden görsel eklemek için kullanılır."
+        "NSCameraUsageDescription": "Varlık QR etiketini taramak ve destek talebinize fotoğraf eklemek için kamera kullanılır.",
+        "NSPhotoLibraryUsageDescription": "Destek talebinize galeriden görsel eklemek için kullanılır.",
+        "NSLocationWhenInUseUsageDescription": "Talebe konum eklemek ve yakınınızdaki talepleri göstermek için konumunuz kullanılır.",
+        "NSMotionUsageDescription": "Cihazı sallayarak hızlı talep bildirimi için hareket sensörü kullanılır."
       }
     },
     "android": {
@@ -23,7 +25,13 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["USE_BIOMETRIC", "USE_FINGERPRINT", "CAMERA"],
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -41,6 +49,18 @@
         {
           "cameraPermission": "Destek talebinize fotoğraf eklemek için kamera kullanılır.",
           "photosPermission": "Destek talebinize galeriden görsel eklemek için kullanılır."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Varlık QR etiketini taramak için kamera kullanılır."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Talebe konum eklemek ve yakınınızdaki talepleri göstermek için konumunuz kullanılır."
         }
       ]
     ]
