@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -28,6 +29,7 @@ import {
   uploadAttachment,
 } from '@/api/tickets';
 import { listUsers } from '@/api/users';
+import { listCanned } from '@/api/canned';
 import { extractErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { isStaffRole, ROLE_LABELS } from '@/auth/roles';
@@ -52,6 +54,10 @@ export default function TicketDetailScreen() {
   const [isInternal, setIsInternal] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignSel, setAssignSel] = useState<string[]>([]);
+  const [cannedOpen, setCannedOpen] = useState(false);
+  const [viewers, setViewers] = useState<{ id: string; email: string }[]>([]);
+  const [typers, setTypers] = useState<{ id: string; name: string }[]>([]);
+  const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [error, setError] = useState<string | null>(null);
 
   const query = useQuery({ queryKey: ['ticket', id], queryFn: () => getTicket(id) });
@@ -69,7 +75,13 @@ export default function TicketDetailScreen() {
     [usersQuery.data],
   );
 
-  // Bu talebin canlı konuşmasına abone ol → yeni yanıt geldiğinde anında tazele.
+  // Hazır yanıtlar (yalnızca personel; sheet açılınca yüklenir).
+  const cannedQuery = useQuery({ queryKey: ['canned'], queryFn: listCanned, enabled: isStaff && cannedOpen });
+
+  const otherViewers = viewers.filter((v) => v.id !== user?.id);
+
+  // Bu talebin canlı konuşmasına abone ol → yeni yanıt + presence (görüntüleyen) +
+  // typing (yazıyor) olaylarını dinle.
   useEffect(() => {
     if (!id) return;
     socket.emit('ticket:subscribe', id);
@@ -79,12 +91,45 @@ export default function TicketDetailScreen() {
         void qc.invalidateQueries({ queryKey: ['ticket', id] });
       }
     };
+    const onPresence = (p: { ticketId: string; viewers: { id: string; email: string }[] }) => {
+      if (p?.ticketId === id) setViewers(p.viewers ?? []);
+    };
+    const onTyping = (p: { ticketId: string; user: { id: string; email: string }; isTyping: boolean }) => {
+      if (p?.ticketId !== id || p.user.id === user?.id) return;
+      const name = p.user.email.split('@')[0];
+      const timers = typingTimers.current;
+      if (p.isTyping) {
+        setTypers((prev) => (prev.some((t) => t.id === p.user.id) ? prev : [...prev, { id: p.user.id, name }]));
+        clearTimeout(timers[p.user.id]);
+        timers[p.user.id] = setTimeout(() => setTypers((prev) => prev.filter((t) => t.id !== p.user.id)), 5000);
+      } else {
+        clearTimeout(timers[p.user.id]);
+        setTypers((prev) => prev.filter((t) => t.id !== p.user.id));
+      }
+    };
     socket.on('ticket:reply', onReply);
+    socket.on('presence', onPresence);
+    socket.on('typing', onTyping);
     return () => {
       socket.off('ticket:reply', onReply);
+      socket.off('presence', onPresence);
+      socket.off('typing', onTyping);
       socket.emit('ticket:unsubscribe', id);
+      setViewers([]);
+      setTypers([]);
     };
-  }, [id, qc]);
+  }, [id, qc, user?.id]);
+
+  // Yazarken diğer izleyenlere "yazıyor" bilgisini yayınla (2.5s sessizlikte durur).
+  useEffect(() => {
+    if (!id) return;
+    if (reply.trim()) {
+      socket.emit('ticket:typing', { ticketId: id, isTyping: true });
+      const t = setTimeout(() => socket.emit('ticket:typing', { ticketId: id, isTyping: false }), 2500);
+      return () => clearTimeout(t);
+    }
+    socket.emit('ticket:typing', { ticketId: id, isTyping: false });
+  }, [reply, id]);
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ['ticket', id] });
@@ -139,6 +184,10 @@ export default function TicketDetailScreen() {
   }
   function toggleAssignee(uid: string) {
     setAssignSel((prev) => (prev.includes(uid) ? prev.filter((x) => x !== uid) : [...prev, uid]));
+  }
+  function insertCanned(body: string) {
+    setReply((prev) => (prev.trim() ? `${prev}\n${body}` : body));
+    setCannedOpen(false);
   }
 
   const reopenMut = useMutation({
@@ -435,7 +484,15 @@ export default function TicketDetailScreen() {
         ) : null}
 
         {/* Konuşma */}
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Yanıtlar ({replies.length})</Text>
+        <View style={styles.repliesHead}>
+          <Text style={styles.sectionTitle}>Yanıtlar ({replies.length})</Text>
+          {otherViewers.length > 0 ? (
+            <View style={styles.viewersBadge}>
+              <Icon name="eye-outline" size={13} color={colors.primary} />
+              <Text style={styles.viewersText}>{otherViewers.length} görüntülüyor</Text>
+            </View>
+          ) : null}
+        </View>
         {replies.length === 0 ? <Text style={styles.muted}>Henüz yanıt yok.</Text> : null}
         {replies.map((r) => {
           const mine = r.authorId === user?.id;
@@ -463,16 +520,25 @@ export default function TicketDetailScreen() {
       {/* Yanıt yazma */}
       {!isClosed ? (
         <View style={styles.composerWrap}>
+          {typers.length > 0 ? (
+            <Text style={styles.typingText}>{typers.map((t) => t.name).join(', ')} yazıyor…</Text>
+          ) : null}
           {isStaff ? (
-            <Pressable style={styles.internalToggle} onPress={() => setIsInternal((v) => !v)}>
-              <Switch
-                value={isInternal}
-                onValueChange={setIsInternal}
-                trackColor={{ true: colors.warn, false: colors.border }}
-                thumbColor="#fff"
-              />
-              <Text style={styles.internalLabel}>Dahili not (yalnızca personel görür)</Text>
-            </Pressable>
+            <View style={styles.composerActions}>
+              <Pressable style={styles.internalToggle} onPress={() => setIsInternal((v) => !v)}>
+                <Switch
+                  value={isInternal}
+                  onValueChange={setIsInternal}
+                  trackColor={{ true: colors.warn, false: colors.border }}
+                  thumbColor="#fff"
+                />
+                <Text style={styles.internalLabel}>Dahili not</Text>
+              </Pressable>
+              <Pressable style={styles.cannedBtn} onPress={() => setCannedOpen(true)} hitSlop={8}>
+                <Icon name="chatbox-ellipses-outline" size={16} color={colors.primary} />
+                <Text style={styles.cannedBtnText}>Hazır yanıt</Text>
+              </Pressable>
+            </View>
           ) : null}
           <View style={styles.composer}>
             <TextField
@@ -494,6 +560,35 @@ export default function TicketDetailScreen() {
           </View>
         </View>
       ) : null}
+
+      {/* Hazır yanıt seçici (personel) */}
+      <Modal visible={cannedOpen} animationType="slide" transparent onRequestClose={() => setCannedOpen(false)}>
+        <View style={styles.backdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>Hazır Yanıtlar</Text>
+              <Pressable onPress={() => router.push('/admin/canned')} hitSlop={8}>
+                <Text style={styles.linkText}>Yönet</Text>
+              </Pressable>
+            </View>
+            <ScrollView style={styles.cannedScroll}>
+              {cannedQuery.isLoading ? (
+                <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />
+              ) : (cannedQuery.data ?? []).length === 0 ? (
+                <Text style={styles.muted}>Kayıtlı hazır yanıt yok. “Yönet” ile ekleyebilirsiniz.</Text>
+              ) : (
+                (cannedQuery.data ?? []).map((c) => (
+                  <Pressable key={c.id} style={styles.cannedItem} onPress={() => insertCanned(c.body)}>
+                    <Text style={styles.cannedTitle}>{c.title}</Text>
+                    <Text style={styles.cannedItemBody} numberOfLines={2}>{c.body}</Text>
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+            <Button title="Kapat" variant="ghost" onPress={() => setCannedOpen(false)} />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -577,4 +672,19 @@ const styles = StyleSheet.create({
   },
   composerInput: { flex: 1, marginBottom: 0 },
   composerBtn: { height: 48 },
+  composerActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 10 },
+  cannedBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  cannedBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  typingText: { fontSize: 12, color: colors.primary, fontStyle: 'italic', paddingHorizontal: 14, paddingTop: 8 },
+  repliesHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 },
+  viewersBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewersText: { fontSize: 12, color: colors.primary, fontWeight: '600' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(15,18,30,0.45)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: colors.bg, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, maxHeight: '80%' },
+  sheetHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: colors.text },
+  cannedScroll: { maxHeight: 380 },
+  cannedItem: { backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 10 },
+  cannedTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
+  cannedItemBody: { fontSize: 13, color: colors.textMuted, marginTop: 4, lineHeight: 18 },
 });

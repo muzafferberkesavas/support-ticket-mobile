@@ -2,6 +2,7 @@ import { api } from './client';
 import type {
   Attachment,
   CreateTicketPayload,
+  Status,
   Ticket,
   TicketFilters,
   TicketReply,
@@ -55,6 +56,20 @@ export async function assignTicket(id: string, assigneeIds: string[]): Promise<T
 export async function escalateTicket(id: string, reason = 'manual'): Promise<Ticket> {
   const { data } = await api.patch<{ ticket: Ticket }>(`/tickets/${id}/escalate`, { reason });
   return data.ticket;
+}
+
+// Personel: toplu işlem. POST /tickets/bulk (requireStaff).
+export async function bulkTickets(
+  ids: string[],
+  action: 'status' | 'delete',
+  opts?: { status?: Status },
+): Promise<{ updated: number; skipped: number }> {
+  const { data } = await api.post<{ updated: number; skipped: number }>('/tickets/bulk', {
+    ids,
+    action,
+    ...(opts?.status ? { status: opts.status } : {}),
+  });
+  return data;
 }
 
 export async function reopenTicket(id: string): Promise<Ticket> {

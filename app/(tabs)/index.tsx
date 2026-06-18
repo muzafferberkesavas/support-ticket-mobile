@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { listTickets } from '@/api/tickets';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { bulkTickets, listTickets } from '@/api/tickets';
 import { extractErrorMessage } from '@/api/client';
-import { Banner, EmptyState } from '@/components/ui';
+import { Banner, Button, EmptyState } from '@/components/ui';
 import { Icon, type IconName } from '@/components/Icon';
 import { TicketCard } from '@/components/ticket';
 import { useAuth } from '@/auth/AuthContext';
@@ -51,6 +51,40 @@ export default function TicketsScreen() {
   const [nearby, setNearby] = useState(false);
   const [myLoc, setMyLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyBusy, setNearbyBusy] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const qc = useQueryClient();
+
+  const bulkMut = useMutation({
+    mutationFn: (v: { action: 'status' | 'delete'; status?: Status }) =>
+      bulkTickets(selectedIds, v.action, v.status ? { status: v.status } : undefined),
+    onSuccess: async () => {
+      setSelectMode(false);
+      setSelectedIds([]);
+      await qc.invalidateQueries({ queryKey: ['tickets'] });
+    },
+    onError: (e) => Alert.alert('Hata', extractErrorMessage(e)),
+  });
+
+  function toggleSelect(ticketId: string) {
+    setSelectedIds((prev) => (prev.includes(ticketId) ? prev.filter((x) => x !== ticketId) : [...prev, ticketId]));
+  }
+  function exitSelect() {
+    setSelectMode(false);
+    setSelectedIds([]);
+  }
+  function bulkStatus() {
+    Alert.alert('Durumu değiştir', `${selectedIds.length} talep güncellenecek`, [
+      ...STATUS_VALUES.map((s) => ({ text: STATUS_META[s].label, onPress: () => bulkMut.mutate({ action: 'status', status: s }) })),
+      { text: 'Vazgeç', style: 'cancel' as const },
+    ]);
+  }
+  function bulkDelete() {
+    Alert.alert('Talepleri sil', `${selectedIds.length} talep kalıcı olarak silinsin mi?`, [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: () => bulkMut.mutate({ action: 'delete' }) },
+    ]);
+  }
 
   const filters: TicketFilters = {
     status,
@@ -150,6 +184,9 @@ export default function TicketsScreen() {
         ))}
         <View style={styles.divider} />
         <Chip label={nearbyBusy ? 'Konum…' : 'Yakındakiler'} icon="location" active={nearby} onPress={toggleNearby} />
+        {isStaff && !selectMode ? (
+          <Chip label="Seç" icon="checkbox-outline" active={false} onPress={() => setSelectMode(true)} />
+        ) : null}
       </ScrollView>
 
       {query.isError ? <View style={styles.pad}><Banner text={extractErrorMessage(query.error)} /></View> : null}
@@ -162,7 +199,17 @@ export default function TicketsScreen() {
             ticket={item.t}
             distanceKm={item.d}
             showRequester={isStaff}
-            onPress={() => router.push(`/ticket/${item.t.id}`)}
+            selectMode={selectMode}
+            selected={selectedIds.includes(item.t.id)}
+            onPress={() => (selectMode ? toggleSelect(item.t.id) : router.push(`/ticket/${item.t.id}`))}
+            onLongPress={
+              isStaff
+                ? () => {
+                    setSelectMode(true);
+                    toggleSelect(item.t.id);
+                  }
+                : undefined
+            }
           />
         )}
         contentContainerStyle={styles.list}
@@ -182,6 +229,17 @@ export default function TicketsScreen() {
           )
         }
       />
+
+      {selectMode ? (
+        <View style={styles.selectBar}>
+          <Text style={styles.selectCount}>{selectedIds.length} seçili</Text>
+          <View style={styles.selectActions}>
+            <Button title="Durum" variant="secondary" icon="swap-vertical" onPress={bulkStatus} disabled={!selectedIds.length || bulkMut.isPending} style={styles.selectBtn} />
+            <Button title="Sil" variant="danger" icon="trash-outline" onPress={bulkDelete} disabled={!selectedIds.length || bulkMut.isPending} style={styles.selectBtn} />
+            <Button title="Vazgeç" variant="ghost" onPress={exitSelect} style={styles.selectBtn} />
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -225,4 +283,16 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.white },
   list: { padding: 16, paddingTop: 8, flexGrow: 1 },
   pad: { paddingHorizontal: 16 },
+  selectBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 14,
+    ...shadow.md,
+  },
+  selectCount: { fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  selectActions: { flexDirection: 'row', gap: 10 },
+  selectBtn: { flex: 1 },
 });

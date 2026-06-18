@@ -51,7 +51,22 @@ export default function AdminHubScreen() {
       show: isAdmin,
       tone: colors.warn,
     },
-    // Faz 4: Operasyonlar (import/export), hazır yanıtlar
+    {
+      title: 'Hazır Yanıtlar',
+      subtitle: 'Sık kullanılan yanıt şablonlarını yönetin',
+      icon: 'chatbox-ellipses-outline',
+      href: '/admin/canned',
+      show: isManager,
+      tone: colors.primary,
+    },
+    {
+      title: 'Operasyonlar',
+      subtitle: 'İş kuyruğu durumu ve dışa aktarım (e-posta)',
+      icon: 'server-outline',
+      href: '/admin/operations',
+      show: isAdmin,
+      tone: colors.info,
+    },
   ];
 
   const visible = items.filter((i) => i.show);

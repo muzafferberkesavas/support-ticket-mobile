@@ -82,6 +82,8 @@ function RootNavigator() {
           <Stack.Screen name="admin/departments" options={{ title: 'Departmanlar' }} />
           <Stack.Screen name="admin/analytics" options={{ title: 'Analitik' }} />
           <Stack.Screen name="admin/sla" options={{ title: 'SLA Ayarları' }} />
+          <Stack.Screen name="admin/canned" options={{ title: 'Hazır Yanıtlar' }} />
+          <Stack.Screen name="admin/operations" options={{ title: 'Operasyonlar' }} />
           <Stack.Screen name="notifications" options={{ title: 'Bildirimler' }} />
         </Stack.Protected>
       </Stack>

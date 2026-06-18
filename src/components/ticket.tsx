@@ -25,13 +25,19 @@ export function SlaBadge({ ticket }: { ticket: Ticket }) {
 export function TicketCard({
   ticket,
   onPress,
+  onLongPress,
   distanceKm,
   showRequester,
+  selectMode,
+  selected,
 }: {
   ticket: Ticket;
   onPress: () => void;
+  onLongPress?: () => void;
   distanceKm?: number | null;
   showRequester?: boolean;
+  selectMode?: boolean;
+  selected?: boolean;
 }) {
   const replyCount = ticket._count?.replies ?? ticket.replies?.length ?? 0;
   const assignees = ticket.assignees ?? [];
@@ -43,8 +49,15 @@ export function TicketCard({
         .join(', ') + (assignees.length > 2 ? ` +${assignees.length - 2}` : '')
     : 'Atanmamış';
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && { opacity: 0.85 }]}
+    >
       <View style={styles.badgeRow}>
+        {selectMode ? (
+          <Icon name={selected ? 'checkbox' : 'square-outline'} size={20} color={selected ? colors.primary : colors.textMuted} />
+        ) : null}
         <StatusBadge status={ticket.status} />
         <PriorityBadge priority={ticket.priority} />
         <SlaBadge ticket={ticket} />
@@ -113,7 +126,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     ...shadow.sm,
   },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  cardSelected: { borderColor: colors.primary, borderWidth: 2 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginBottom: 10 },
   staffRow: {
     flexDirection: 'row',
     gap: 14,
