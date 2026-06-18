@@ -78,6 +78,8 @@ function RootNavigator() {
           <Stack.Screen name="scan" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="ticket/[id]" options={{ title: 'Talep' }} />
           <Stack.Screen name="edit/[id]" options={{ title: 'Talebi Düzenle', presentation: 'modal' }} />
+          <Stack.Screen name="admin/users" options={{ title: 'Kullanıcılar' }} />
+          <Stack.Screen name="admin/departments" options={{ title: 'Departmanlar' }} />
         </Stack.Protected>
       </Stack>
 

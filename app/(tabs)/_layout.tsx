@@ -22,7 +22,7 @@ function HomeHeaderRight() {
 }
 
 export default function TabsLayout() {
-  const { isStaff } = useAuth();
+  const { isStaff, isManager } = useAuth();
   return (
     <Tabs
       screenOptions={{
@@ -60,6 +60,16 @@ export default function TabsLayout() {
           title: 'Yeni Talep',
           tabBarLabel: 'Yeni',
           tabBarIcon: ({ color, size }) => <Icon name="add-circle" size={size + 4} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: 'Yönetim',
+          tabBarLabel: 'Yönetim',
+          tabBarIcon: ({ color, size }) => <Icon name="settings-outline" size={size} color={color} />,
+          // Yalnızca yönetici/takım lideri görür.
+          href: isManager ? '/admin' : null,
         }}
       />
       <Tabs.Screen

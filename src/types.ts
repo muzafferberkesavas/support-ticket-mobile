@@ -11,9 +11,37 @@ export interface User {
   fullName?: string | null;
   mustChangePassword?: boolean;
   createdAt?: string;
+  memberships?: { department: { id: string; name: string } }[];
+  _count?: { tickets: number; assignments: number };
 }
 
 export type PublicUser = Pick<User, 'id' | 'email' | 'role' | 'fullName'>;
+
+export interface DepartmentMember {
+  id: string;
+  userId: string;
+  departmentId: string;
+  user: PublicUser;
+}
+
+export interface CreateUserPayload {
+  email: string;
+  fullName?: string;
+  role: Role;
+  departmentIds?: string[];
+}
+
+export interface UpdateUserPayload {
+  fullName?: string | null;
+  role?: Role;
+  departmentIds?: string[];
+}
+
+export interface DepartmentInput {
+  name: string;
+  description?: string | null;
+  memberIds?: string[];
+}
 
 export interface SlaInfo {
   responseTargetMinutes: number;
@@ -99,8 +127,9 @@ export interface Department {
   id: string;
   name: string;
   description?: string | null;
-  members?: PublicUser[];
-  _count?: { tickets?: number; members?: number };
+  createdAt?: string;
+  members?: DepartmentMember[];
+  _count?: { tickets: number; members: number };
 }
 
 // GET /dashboard (personel) — KPI sayıları + hızlı listeler.
