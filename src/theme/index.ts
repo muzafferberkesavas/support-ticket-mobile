@@ -1,15 +1,20 @@
 import type { Priority, Status } from '@/types';
 
-// Web arayüzüyle (PrimeVue severity'leri) tutarlı renk paleti.
+// Web arayüzüyle (PrimeVue + indigo/mor marka) tutarlı renk paleti.
 export const colors = {
-  bg: '#f1f5f9',
+  bg: '#f3f4fb',
   surface: '#ffffff',
-  surfaceAlt: '#f8fafc',
-  border: '#e2e8f0',
-  text: '#0f172a',
-  textMuted: '#64748b',
-  primary: '#2563eb',
-  primaryDark: '#1d4ed8',
+  surfaceAlt: '#f7f8fc',
+  border: '#e6e7f0',
+  text: '#1f2433',
+  textMuted: '#6b7280',
+  // Marka: web dashboard'daki indigo/mor (BrandLogo gradyanı ile aynı).
+  primary: '#4f46e5',
+  primaryDark: '#4338ca',
+  primarySoft: '#eef2ff',
+  brand1: '#6366f1',
+  brand2: '#7c3aed',
+  brand3: '#4338ca',
   // Severity renkleri (web ile aynı anlam).
   success: '#16a34a',
   successBg: '#dcfce7',
@@ -20,9 +25,27 @@ export const colors = {
   danger: '#dc2626',
   dangerBg: '#fee2e2',
   secondary: '#64748b',
-  secondaryBg: '#e2e8f0',
+  secondaryBg: '#eef0f6',
   white: '#ffffff',
 };
+
+// Tutarlı yükselti/gölge (iOS shadow + Android elevation).
+export const shadow = {
+  sm: {
+    shadowColor: '#1f2433',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#312e81',
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+} as const;
 
 type Tone = { fg: string; bg: string };
 

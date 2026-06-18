@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Banner, Button, TextField } from './ui';
+import { Icon } from './Icon';
 import { captureLocation, geoTag, type Geo } from '@/features/geo';
 import { colors, PRIORITY_META, PRIORITY_VALUES } from '@/theme';
 import type { Priority } from '@/types';
@@ -153,7 +154,8 @@ export function TicketForm({
         <View style={styles.tagWrap}>
           {values.tags.map((t) => (
             <Pressable key={t} onPress={() => set('tags', values.tags.filter((x) => x !== t))} style={styles.tag}>
-              <Text style={styles.tagText}>{t} ✕</Text>
+              <Text style={styles.tagText}>{t}</Text>
+              <Icon name="close" size={14} color={colors.info} />
             </Pressable>
           ))}
         </View>
@@ -164,11 +166,14 @@ export function TicketForm({
           <Text style={styles.label}>Konum (isteğe bağlı)</Text>
           {geo ? (
             <Pressable onPress={() => setGeo(null)} style={styles.locChip}>
-              <Text style={styles.locText}>📍 {geo.label}  ✕</Text>
+              <Icon name="location" size={16} color={colors.success} />
+              <Text style={styles.locText}>{geo.label}</Text>
+              <Icon name="close-circle" size={16} color={colors.success} />
             </Pressable>
           ) : (
             <Button
-              title={geoBusy ? 'Konum alınıyor…' : '📍 Konumu Ekle'}
+              title={geoBusy ? 'Konum alınıyor…' : 'Konumu Ekle'}
+              icon="location-outline"
               variant="secondary"
               loading={geoBusy}
               onPress={addLocation}
@@ -182,7 +187,7 @@ export function TicketForm({
         </View>
       ) : null}
 
-      <Button title={submitLabel} onPress={submit} loading={loading} style={{ marginTop: 16 }} />
+      <Button title={submitLabel} icon="checkmark-circle-outline" onPress={submit} loading={loading} style={{ marginTop: 16 }} />
     </View>
   );
 }
@@ -203,17 +208,30 @@ const styles = StyleSheet.create({
   tagInputRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   addTagBtn: { marginTop: 0, height: 48 },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 8 },
-  tag: { backgroundColor: colors.infoBg, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.infoBg,
+    borderRadius: 999,
+    paddingLeft: 12,
+    paddingRight: 8,
+    paddingVertical: 6,
+  },
   tagText: { color: colors.info, fontWeight: '600', fontSize: 13 },
   locSection: { marginTop: 6 },
   locChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     alignSelf: 'flex-start',
+    maxWidth: '100%',
     backgroundColor: colors.successBg,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
   },
-  locText: { color: colors.success, fontWeight: '600', fontSize: 14 },
+  locText: { color: colors.success, fontWeight: '600', fontSize: 14, flexShrink: 1 },
   geoErr: { color: colors.danger, fontSize: 12, marginTop: 6 },
   savedNote: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
 });

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { Banner, Button, Card, TextField } from '@/components/ui';
+import { Icon } from '@/components/Icon';
 import { useAuth } from '@/auth/AuthContext';
 import { changePassword, updateProfile } from '@/api/auth';
 import { getBiometricCapability } from '@/auth/biometrics';
@@ -62,7 +63,10 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         {/* Hesap */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Hesap</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="person-circle-outline" size={19} color={colors.primary} />
+            <Text style={styles.cardTitle}>Hesap</Text>
+          </View>
           <Text style={styles.fieldLabel}>E-posta</Text>
           <Text style={styles.readonly}>{user?.email}</Text>
           <Text style={styles.fieldLabel}>Rol</Text>
@@ -71,16 +75,23 @@ export default function ProfileScreen() {
 
         {/* Profil düzenleme */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Profil</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="create-outline" size={19} color={colors.primary} />
+            <Text style={styles.cardTitle}>Profil</Text>
+          </View>
           {profileMsg ? <Banner text={profileMsg} tone="info" /> : null}
           <TextField label="Ad Soyad" value={fullName} onChangeText={setFullName} placeholder="Ad Soyad" />
-          <Button title="Kaydet" onPress={() => profileMut.mutate()} loading={profileMut.isPending} />
+          <Button title="Kaydet" icon="save-outline" onPress={() => profileMut.mutate()} loading={profileMut.isPending} />
         </Card>
 
         {/* Güvenlik */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Güvenlik</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="shield-checkmark-outline" size={19} color={colors.primary} />
+            <Text style={styles.cardTitle}>Güvenlik</Text>
+          </View>
           <View style={styles.switchRow}>
+            <Icon name="finger-print" size={22} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.switchLabel}>{biometricLabel} ile giriş</Text>
               <Text style={styles.switchHint}>Açılışta parola yerine {biometricLabel} ile kilidi açın.</Text>
@@ -91,7 +102,10 @@ export default function ProfileScreen() {
 
         {/* Parola değiştirme */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Parola Değiştir</Text>
+          <View style={styles.cardTitleRow}>
+            <Icon name="key-outline" size={19} color={colors.primary} />
+            <Text style={styles.cardTitle}>Parola Değiştir</Text>
+          </View>
           {pwMsg ? <Banner text={pwMsg} tone="info" /> : null}
           <TextField
             label="Mevcut parola"
@@ -109,6 +123,7 @@ export default function ProfileScreen() {
           />
           <Button
             title="Parolayı Güncelle"
+            icon="key-outline"
             variant="secondary"
             onPress={() => {
               if (newPassword.length < 6) return setPwMsg('Yeni parola en az 6 karakter olmalı.');
@@ -119,7 +134,7 @@ export default function ProfileScreen() {
           />
         </Card>
 
-        <Button title="Çıkış Yap" variant="danger" onPress={() => void logout()} style={{ marginTop: 4 }} />
+        <Button title="Çıkış Yap" icon="log-out-outline" variant="danger" onPress={() => void logout()} style={{ marginTop: 4 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -129,7 +144,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: colors.bg },
   container: { padding: 16, gap: 14 },
   card: { gap: 4 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 8 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginTop: 8 },
   readonly: { fontSize: 15, color: colors.text, marginTop: 2 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

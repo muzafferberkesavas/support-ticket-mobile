@@ -57,7 +57,7 @@ export default function RegisterScreen() {
             placeholder="En az 6 karakter"
             secureTextEntry
           />
-          <Button title="Hesap Oluştur" onPress={onSubmit} loading={loading} />
+          <Button title="Hesap Oluştur" icon="person-add-outline" onPress={onSubmit} loading={loading} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

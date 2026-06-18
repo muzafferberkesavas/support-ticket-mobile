@@ -45,6 +45,7 @@ export default function NewTicketScreen() {
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <TicketForm
+          key={`${params.prefillSubject ?? ''}|${params.prefillTag ?? ''}`}
           initial={initial}
           enableLocation
           submitLabel="Talebi Oluştur"

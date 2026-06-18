@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui';
+import { Icon } from '@/components/Icon';
 import { useAuth } from '@/auth/AuthContext';
 import { colors } from '@/theme';
 
@@ -27,14 +28,21 @@ export default function LockScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.logo}>🔒</Text>
+        <View style={styles.logoCircle}>
+          <Icon name="finger-print" size={42} color={colors.primary} />
+        </View>
         <Text style={styles.title}>Destek Mobil kilitli</Text>
         <Text style={styles.subtitle}>
           {failed
             ? `${biometricLabel} doğrulanamadı. Tekrar deneyin.`
             : `Devam etmek için ${biometricLabel} ile kimliğinizi doğrulayın.`}
         </Text>
-        <Button title={`${biometricLabel} ile aç`} onPress={tryUnlock} style={{ marginTop: 24, width: '100%' }} />
+        <Button
+          title={`${biometricLabel} ile aç`}
+          icon="finger-print"
+          onPress={tryUnlock}
+          style={{ marginTop: 24, width: '100%' }}
+        />
         <Button
           title="Farklı hesapla giriş yap"
           variant="ghost"
@@ -49,7 +57,14 @@ export default function LockScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  logo: { fontSize: 64 },
-  title: { fontSize: 24, fontWeight: '800', color: colors.text, marginTop: 12 },
+  logoCircle: {
+    width: 92,
+    height: 92,
+    borderRadius: 28,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: { fontSize: 24, fontWeight: '800', color: colors.text, marginTop: 16 },
   subtitle: { fontSize: 15, color: colors.textMuted, marginTop: 8, textAlign: 'center' },
 });

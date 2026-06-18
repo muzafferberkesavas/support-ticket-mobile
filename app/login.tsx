@@ -78,7 +78,7 @@ export default function LoginScreen() {
             autoComplete="password"
           />
 
-          <Button title="Giriş Yap" onPress={onSubmit} loading={loading} />
+          <Button title="Giriş Yap" icon="log-in-outline" onPress={onSubmit} loading={loading} />
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Hesabınız yok mu? </Text>

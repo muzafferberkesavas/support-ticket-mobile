@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +27,8 @@ import { extractErrorMessage } from '@/api/client';
 import { useAuth } from '@/auth/AuthContext';
 import { Badge, Banner, Button, Card, TextField } from '@/components/ui';
 import { PriorityBadge, SlaBadge, StatusBadge } from '@/components/ticket';
+import { Icon } from '@/components/Icon';
+import { socket } from '@/realtime/socket';
 import { colors, formatDateTime } from '@/theme';
 
 function bytes(n: number): string {
@@ -46,6 +48,23 @@ export default function TicketDetailScreen() {
   const query = useQuery({ queryKey: ['ticket', id], queryFn: () => getTicket(id) });
   const t = query.data;
   const isOwner = !!t && !!user && t.userId === user.id;
+
+  // Bu talebin canlı konuşmasına abone ol → yeni yanıt geldiğinde anında tazele.
+  useEffect(() => {
+    if (!id) return;
+    socket.emit('ticket:subscribe', id);
+    const onReply = (p: { ticketId: string }) => {
+      if (p?.ticketId === id) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        void qc.invalidateQueries({ queryKey: ['ticket', id] });
+      }
+    };
+    socket.on('ticket:reply', onReply);
+    return () => {
+      socket.off('ticket:reply', onReply);
+      socket.emit('ticket:unsubscribe', id);
+    };
+  }, [id, qc]);
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ['ticket', id] });
@@ -163,11 +182,11 @@ export default function TicketDetailScreen() {
               <View style={styles.headerActions}>
                 {!isClosed ? (
                   <Pressable onPress={() => router.push(`/edit/${id}`)} hitSlop={10}>
-                    <Text style={styles.headerEdit}>Düzenle</Text>
+                    <Icon name="create-outline" size={22} color="#fff" />
                   </Pressable>
                 ) : null}
                 <Pressable onPress={confirmDelete} hitSlop={10}>
-                  <Text style={styles.headerDelete}>🗑</Text>
+                  <Icon name="trash-outline" size={21} color="#fecaca" />
                 </Pressable>
               </View>
             ) : null,
@@ -207,17 +226,25 @@ export default function TicketDetailScreen() {
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>Ekler ({t.attachments?.length ?? 0})</Text>
           {!isClosed ? (
-            <Pressable onPress={addPhoto} hitSlop={8} disabled={uploadMut.isPending}>
-              <Text style={styles.addPhoto}>{uploadMut.isPending ? 'Yükleniyor…' : '📷 Görsel ekle'}</Text>
+            <Pressable onPress={addPhoto} hitSlop={8} disabled={uploadMut.isPending} style={styles.addPhotoBtn}>
+              <Icon name="camera-outline" size={16} color={colors.primary} />
+              <Text style={styles.addPhoto}>{uploadMut.isPending ? 'Yükleniyor…' : 'Görsel ekle'}</Text>
             </Pressable>
           ) : null}
         </View>
         {t.attachments && t.attachments.length > 0 ? (
           t.attachments.map((a) => (
             <Card key={a.id} style={styles.attachment}>
-              <Text style={styles.attachName} numberOfLines={1}>
-                {a.mimeType.startsWith('image/') ? '🖼' : '📎'} {a.filename}
-              </Text>
+              <View style={styles.attachLeft}>
+                <Icon
+                  name={a.mimeType.startsWith('image/') ? 'image-outline' : 'document-outline'}
+                  size={18}
+                  color={colors.textMuted}
+                />
+                <Text style={styles.attachName} numberOfLines={1}>
+                  {a.filename}
+                </Text>
+              </View>
               <Text style={styles.meta}>{bytes(a.size)}</Text>
             </Card>
           ))
@@ -234,15 +261,18 @@ export default function TicketDetailScreen() {
                 <View style={styles.stars}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <Pressable key={n} onPress={() => csatMut.mutate(n)} disabled={csatMut.isPending} hitSlop={6}>
-                      <Text style={styles.star}>☆</Text>
+                      <Icon name="star-outline" size={34} color={colors.warn} />
                     </Pressable>
                   ))}
                 </View>
               </>
             ) : (
-              <Text style={styles.muted}>
-                Değerlendirmeniz: {'★'.repeat(t.csatRating)}{'☆'.repeat(5 - t.csatRating)}
-              </Text>
+              <View style={styles.ratedRow}>
+                <Text style={styles.muted}>Değerlendirmeniz:</Text>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Icon key={n} name={n <= t.csatRating! ? 'star' : 'star-outline'} size={18} color={colors.warn} />
+                ))}
+              </View>
             )}
             <Button
               title="Talebi Yeniden Aç"
@@ -284,6 +314,7 @@ export default function TicketDetailScreen() {
           />
           <Button
             title="Gönder"
+            icon="send"
             onPress={() => reply.trim() && replyMut.mutate()}
             loading={replyMut.isPending}
             disabled={!reply.trim()}
@@ -313,6 +344,9 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 22, marginBottom: 8 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
   addPhoto: { color: colors.primary, fontWeight: '700' },
+  addPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  attachLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 },
+  ratedRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   attachment: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingVertical: 12 },
   attachName: { flex: 1, fontSize: 14, color: colors.text, marginRight: 8 },
   closedCard: { marginTop: 18, backgroundColor: colors.surfaceAlt },

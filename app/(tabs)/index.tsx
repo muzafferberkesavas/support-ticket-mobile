@@ -1,23 +1,34 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FlatList } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { listTickets } from '@/api/tickets';
 import { extractErrorMessage } from '@/api/client';
 import { Banner, EmptyState } from '@/components/ui';
+import { Icon, type IconName } from '@/components/Icon';
 import { TicketCard } from '@/components/ticket';
 import { captureLocation, haversineKm, parseGeo } from '@/features/geo';
-import { colors, PRIORITY_META, PRIORITY_VALUES, STATUS_META, STATUS_VALUES } from '@/theme';
+import { colors, shadow, PRIORITY_META, PRIORITY_VALUES, STATUS_META, STATUS_VALUES } from '@/theme';
 import type { Priority, Status, TicketFilters } from '@/types';
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function Chip({
+  label,
+  active,
+  onPress,
+  icon,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  icon?: IconName;
+}) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
-    >
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+      <View style={styles.chipRow}>
+        {icon ? <Icon name={icon} size={13} color={active ? colors.white : colors.textMuted} /> : null}
+        <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -68,26 +79,9 @@ export default function TicketsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerRight: () => (
-            <View style={styles.headerActions}>
-              <Pressable onPress={() => router.push('/scan')} hitSlop={10}>
-                <Text style={styles.headerIcon}>📷</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/profile')} hitSlop={10}>
-                <Text style={styles.headerIcon}>👤</Text>
-              </Pressable>
-              <Pressable onPress={() => router.push('/new')} hitSlop={10}>
-                <Text style={styles.headerPlus}>＋</Text>
-              </Pressable>
-            </View>
-          ),
-        }}
-      />
-
       {/* Arama */}
       <View style={styles.searchRow}>
+        <Icon name="search" size={18} color={colors.textMuted} />
         <TextInput
           style={styles.search}
           value={searchInput}
@@ -105,7 +99,7 @@ export default function TicketsScreen() {
             }}
             hitSlop={10}
           >
-            <Text style={styles.clear}>✕</Text>
+            <Icon name="close-circle" size={18} color={colors.textMuted} />
           </Pressable>
         ) : null}
       </View>
@@ -135,7 +129,7 @@ export default function TicketsScreen() {
           />
         ))}
         <View style={styles.divider} />
-        <Chip label={nearbyBusy ? 'Konum…' : '📍 Yakındakiler'} active={nearby} onPress={toggleNearby} />
+        <Chip label={nearbyBusy ? 'Konum…' : 'Yakındakiler'} icon="location" active={nearby} onPress={toggleNearby} />
       </ScrollView>
 
       {query.isError ? <View style={styles.pad}><Banner text={extractErrorMessage(query.error)} /></View> : null}
@@ -174,21 +168,25 @@ export default function TicketsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  connDot: { width: 9, height: 9, borderRadius: 5 },
+  connOn: { backgroundColor: colors.success },
+  connOff: { backgroundColor: colors.secondary },
   headerIcon: { fontSize: 20 },
   headerPlus: { fontSize: 28, color: colors.primary, fontWeight: '600', lineHeight: 30 },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     backgroundColor: colors.surface,
     margin: 16,
     marginBottom: 8,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    ...shadow.sm,
   },
-  search: { flex: 1, paddingVertical: 12, fontSize: 15, color: colors.text },
-  clear: { color: colors.textMuted, fontSize: 16, paddingLeft: 8 },
+  search: { flex: 1, paddingVertical: 13, fontSize: 15, color: colors.text },
   filterScroll: { maxHeight: 44, marginBottom: 4 },
   filterRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
   divider: { width: 1, height: 22, backgroundColor: colors.border, marginHorizontal: 2 },
@@ -201,6 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   chipText: { color: colors.text, fontSize: 13, fontWeight: '600' },
   chipTextActive: { color: colors.white },
   list: { padding: 16, paddingTop: 8, flexGrow: 1 },

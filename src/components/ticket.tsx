@@ -1,8 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from './ui';
+import { Icon } from './Icon';
 import { formatKm } from '@/features/geo';
-import { colors, formatDateTime, PRIORITY_META, slaState, STATUS_META } from '@/theme';
+import { colors, shadow, formatDateTime, PRIORITY_META, slaState, STATUS_META } from '@/theme';
 import type { Ticket } from '@/types';
 
 export function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
@@ -38,18 +39,39 @@ export function TicketCard({
         <PriorityBadge priority={ticket.priority} />
         <SlaBadge ticket={ticket} />
       </View>
-      <Text style={styles.subject} numberOfLines={1}>
-        {ticket.subject}
-      </Text>
+      <View style={styles.subjectRow}>
+        <Text style={styles.subject} numberOfLines={1}>
+          {ticket.subject}
+        </Text>
+        <Icon name="chevron-forward" size={16} color={colors.textMuted} />
+      </View>
       <Text style={styles.message} numberOfLines={2}>
         {ticket.message}
       </Text>
       <View style={styles.footer}>
-        <Text style={styles.meta}>{formatDateTime(ticket.createdAt)}</Text>
+        <View style={styles.footerItem}>
+          <Icon name="time-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.meta}>{formatDateTime(ticket.createdAt)}</Text>
+        </View>
         <View style={styles.footerRight}>
-          {distanceKm != null ? <Text style={styles.distance}>📍 {formatKm(distanceKm)}</Text> : null}
-          {ticket.category ? <Text style={styles.meta}>· {ticket.category}</Text> : null}
-          {replyCount > 0 ? <Text style={styles.meta}>· {replyCount} yanıt</Text> : null}
+          {distanceKm != null ? (
+            <View style={styles.footerItem}>
+              <Icon name="location" size={13} color={colors.success} />
+              <Text style={styles.distance}>{formatKm(distanceKm)}</Text>
+            </View>
+          ) : null}
+          {ticket.category ? (
+            <View style={styles.footerItem}>
+              <Icon name="pricetag-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.meta}>{ticket.category}</Text>
+            </View>
+          ) : null}
+          {replyCount > 0 ? (
+            <View style={styles.footerItem}>
+              <Icon name="chatbubble-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.meta}>{replyCount}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -59,17 +81,20 @@ export function TicketCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
     padding: 16,
     marginBottom: 12,
+    ...shadow.sm,
   },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
-  subject: { fontSize: 16, fontWeight: '700', color: colors.text },
-  message: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  footerRight: { flexDirection: 'row', gap: 4, alignItems: 'center' },
+  subjectRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  subject: { flex: 1, fontSize: 16, fontWeight: '700', color: colors.text },
+  message: { fontSize: 14, color: colors.textMuted, marginTop: 5, lineHeight: 20 },
+  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
+  footerRight: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  footerItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   meta: { fontSize: 12, color: colors.textMuted },
   distance: { fontSize: 12, color: colors.success, fontWeight: '700' },
 });

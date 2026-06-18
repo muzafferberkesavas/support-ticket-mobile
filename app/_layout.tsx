@@ -8,16 +8,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { useShake } from '@/features/useShake';
+import { ToastProvider } from '@/components/Toast';
+import { GradientHeader } from '@/components/GradientHeader';
+import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { colors } from '@/theme';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15_000 } },
 });
 
-const headerStyle = {
-  headerStyle: { backgroundColor: colors.surface },
-  headerTitleStyle: { color: colors.text },
-  headerTintColor: colors.primary,
+const screenOptions = {
+  // Web markasıyla aynı indigo/mor gradyan başlık (geri/başlık/aksiyon ortak).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  header: (props: any) => <GradientHeader {...props} />,
   contentStyle: { backgroundColor: colors.bg },
 };
 
@@ -45,7 +48,7 @@ function RootNavigator() {
 
   return (
     <>
-      <Stack screenOptions={headerStyle}>
+      <Stack screenOptions={screenOptions}>
         {/* Kimlik doğrulanmamış */}
         <Stack.Protected guard={status === 'noauth'}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
@@ -57,19 +60,18 @@ function RootNavigator() {
           <Stack.Screen name="lock" options={{ headerShown: false }} />
         </Stack.Protected>
 
-        {/* Kimlik doğrulandı */}
+        {/* Kimlik doğrulandı — alt sekmeler + modal/detay ekranları */}
         <Stack.Protected guard={status === 'ready'}>
-          <Stack.Screen name="index" options={{ title: 'Taleplerim' }} />
-          <Stack.Screen name="new" options={{ title: 'Yeni Talep', presentation: 'modal' }} />
-          <Stack.Screen name="scan" options={{ title: 'Varlık QR Tara', presentation: 'modal' }} />
-          <Stack.Screen name="profile" options={{ title: 'Profil' }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="scan" options={{ headerShown: false, presentation: 'modal' }} />
           <Stack.Screen name="ticket/[id]" options={{ title: 'Talep' }} />
           <Stack.Screen name="edit/[id]" options={{ title: 'Talebi Düzenle', presentation: 'modal' }} />
         </Stack.Protected>
       </Stack>
 
-      {/* Sallama kısayolu yalnızca oturum açıkken aktif */}
+      {/* Sallama kısayolu + gerçek zamanlı bağlantı yalnızca oturum açıkken aktif */}
       {status === 'ready' ? <ShakeReporter /> : null}
+      {status === 'ready' ? <RealtimeBridge /> : null}
     </>
   );
 }
@@ -78,12 +80,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </AuthProvider>
-        </QueryClientProvider>
+        <ToastProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </AuthProvider>
+          </QueryClientProvider>
+        </ToastProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
