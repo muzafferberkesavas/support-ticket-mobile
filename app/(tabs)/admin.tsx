@@ -35,15 +35,23 @@ export default function AdminHubScreen() {
       show: isAdmin,
       tone: colors.info,
     },
-    // Faz 3+ buraya: Analitik (manager), SLA ayarları (admin), Operasyonlar (admin)
     {
       title: 'Analitik & İçgörü',
-      subtitle: 'Yakında — KPI’lar, grafikler, tekrar eden problemler',
+      subtitle: 'KPI’lar, grafikler, temsilci performansı, tekrar eden problemler',
       icon: 'bar-chart-outline',
-      href: '/admin',
+      href: '/admin/analytics',
       show: isManager,
-      tone: colors.textMuted,
+      tone: colors.success,
     },
+    {
+      title: 'SLA Ayarları',
+      subtitle: 'Öncelik bazında yanıt ve çözüm hedefleri',
+      icon: 'timer-outline',
+      href: '/admin/sla',
+      show: isAdmin,
+      tone: colors.warn,
+    },
+    // Faz 4: Operasyonlar (import/export), hazır yanıtlar
   ];
 
   const visible = items.filter((i) => i.show);
@@ -53,25 +61,22 @@ export default function AdminHubScreen() {
       <Text style={styles.heading}>Yönetim</Text>
       <Text style={styles.sub}>Sistem yönetimi araçları</Text>
 
-      {visible.map((it) => {
-        const soon = it.href === '/admin';
-        return (
-          <Pressable
-            key={it.title}
-            onPress={() => !soon && router.push(it.href)}
-            style={({ pressed }) => [styles.card, pressed && !soon && { opacity: 0.85 }, soon && styles.cardSoon]}
-          >
-            <View style={[styles.iconWrap, { backgroundColor: it.tone + '1f' }]}>
-              <Icon name={it.icon} size={22} color={it.tone} />
-            </View>
-            <View style={styles.flex1}>
-              <Text style={styles.cardTitle}>{it.title}</Text>
-              <Text style={styles.cardSub}>{it.subtitle}</Text>
-            </View>
-            {!soon ? <Icon name="chevron-forward" size={18} color={colors.textMuted} /> : null}
-          </Pressable>
-        );
-      })}
+      {visible.map((it) => (
+        <Pressable
+          key={it.title}
+          onPress={() => router.push(it.href)}
+          style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
+        >
+          <View style={[styles.iconWrap, { backgroundColor: it.tone + '1f' }]}>
+            <Icon name={it.icon} size={22} color={it.tone} />
+          </View>
+          <View style={styles.flex1}>
+            <Text style={styles.cardTitle}>{it.title}</Text>
+            <Text style={styles.cardSub}>{it.subtitle}</Text>
+          </View>
+          <Icon name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
+      ))}
     </ScrollView>
   );
 }

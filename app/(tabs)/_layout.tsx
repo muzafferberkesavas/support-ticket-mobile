@@ -1,19 +1,31 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { GradientHeader } from '@/components/GradientHeader';
 import { Icon } from '@/components/Icon';
 import { useAuth } from '@/auth/AuthContext';
+import { getUnreadCount } from '@/api/notifications';
 import { useSocketConnected } from '@/realtime/socket';
 import { colors } from '@/theme';
 
-// Liste sekmesinin başlık sağ aksiyonları: canlı bağlantı göstergesi + QR tara.
+// Liste sekmesinin başlık sağ aksiyonları: bağlantı göstergesi + bildirim zili + QR.
 function HomeHeaderRight() {
   const router = useRouter();
   const connected = useSocketConnected();
+  const unread = useQuery({ queryKey: ['unread-count'], queryFn: getUnreadCount, refetchInterval: 30_000 });
+  const count = unread.data ?? 0;
   return (
     <View style={styles.headerRight}>
       <View style={[styles.dot, { backgroundColor: connected ? '#86efac' : 'rgba(255,255,255,0.45)' }]} />
+      <Pressable onPress={() => router.push('/notifications')} hitSlop={10}>
+        <Icon name="notifications-outline" size={23} color="#fff" />
+        {count > 0 ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{count > 9 ? '9+' : count}</Text>
+          </View>
+        ) : null}
+      </Pressable>
       <Pressable onPress={() => router.push('/scan')} hitSlop={10}>
         <Icon name="qr-code-outline" size={23} color="#fff" />
       </Pressable>
@@ -87,6 +99,19 @@ export default function TabsLayout() {
 const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   dot: { width: 9, height: 9, borderRadius: 5 },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -7,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   tabBar: {
     height: 62,
     paddingBottom: 8,

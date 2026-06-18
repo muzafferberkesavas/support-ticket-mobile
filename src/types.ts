@@ -140,6 +140,18 @@ export interface DashboardData {
   unassigned: Ticket[];
 }
 
+export type NotificationType = 'reply' | 'created' | 'assigned' | 'status';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  ticketId: string | null;
+  ticketSubject: string;
+  actor?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface CreateTicketPayload {
   subject: string;
   message: string;
