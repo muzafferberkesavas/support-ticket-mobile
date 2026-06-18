@@ -3,6 +3,7 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, Vi
 import { Link } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner, Button, TextField } from '@/components/ui';
+import { BrandLogo } from '@/components/BrandLogo';
 import { useAuth } from '@/auth/AuthContext';
 import { getBiometricCapability } from '@/auth/biometrics';
 import { extractErrorMessage } from '@/api/client';
@@ -52,7 +53,7 @@ export default function LoginScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.logo}>🎫</Text>
+            <BrandLogo size={64} />
             <Text style={styles.title}>Destek Mobil</Text>
             <Text style={styles.subtitle}>Destek taleplerinizi yönetin</Text>
           </View>
@@ -95,8 +96,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   container: { padding: 24, flexGrow: 1, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 32 },
-  logo: { fontSize: 56 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginTop: 8 },
+  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginTop: 12 },
   subtitle: { fontSize: 15, color: colors.textMuted, marginTop: 4 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
   footerText: { color: colors.textMuted },
