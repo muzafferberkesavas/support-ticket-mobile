@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Appearance, DevSettings, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -21,6 +21,7 @@ import { GradientHeader } from '@/components/GradientHeader';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { applyInterFont } from '@/theme/fonts';
 import { configureNotifications } from '@/features/push';
+import { getThemePref } from '@/theme/pref';
 import { colors, isDark, scheme } from '@/theme';
 
 // Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
@@ -100,7 +101,33 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  // OS teması (açık/koyu) değişince paleti uygulamak için uygulamayı yeniden yükle.
+  const [themeReady, setThemeReady] = useState(false);
+
+  // Cold-start: kayıtlı tema tercihini uygula. Modül yanlış paletle yüklendiyse
+  // (override henüz set değilken) Appearance override'ı kurup yeniden yükle.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const pref = await getThemePref();
+      const want = pref === 'system' ? (Appearance.getColorScheme() === 'dark' ? 'dark' : 'light') : pref;
+      if (want !== scheme) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        Appearance.setColorScheme(pref === 'system' ? (null as any) : pref);
+        try {
+          DevSettings.reload();
+          return;
+        } catch {
+          /* noop */
+        }
+      }
+      if (active) setThemeReady(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // pref=system iken OS teması değişirse uygula (override yokken tetiklenir).
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme }) => {
       const next = colorScheme === 'dark' ? 'dark' : 'light';
@@ -125,7 +152,7 @@ export default function RootLayout() {
 
   // Inter yüklenene kadar boş zemin; ama hata olursa (asset cache sorunu) yine de
   // sistem fontuyla devam et — sonsuz boş ekranda takılma.
-  if (!fontsLoaded && !fontError) {
+  if ((!fontsLoaded && !fontError) || !themeReady) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
 

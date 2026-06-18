@@ -1,15 +1,18 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// NOT: expo-notifications, Expo Go SDK 53+ ile import edildiğinde hata fırlatır
-// (remote push Expo Go'dan kaldırıldı). Bu yüzden modülü lazy + guard ile yüklüyoruz:
-// - Geliştirme derlemesinde (dev build) tam çalışır.
-// - Expo Go'da güvenle devre dışı kalır (uygulama çökmez), test butonu uyarı verir.
+// Expo Go SDK 53+ expo-notifications'ı kaldırdı; API çağrıları hata loglar.
+// Expo Go'da modülü hiç yükleme — dev build'de tam çalışır.
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+
+// NOT: modülü lazy + guard ile yüklüyoruz; Expo Go'da güvenle devre dışı kalır.
 type NotifModule = typeof import('expo-notifications');
 let mod: NotifModule | null = null;
 let tried = false;
 function load(): NotifModule | null {
   if (tried) return mod;
   tried = true;
+  if (isExpoGo) return (mod = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('expo-notifications') as NotifModule;
