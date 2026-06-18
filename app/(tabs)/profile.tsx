@@ -94,7 +94,7 @@ export default function ProfileScreen() {
               <Icon name="sparkles" size={20} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.switchLabel}>Mobil Özellikler</Text>
-                <Text style={styles.switchHint}>Eklenen 9 cihaz yeteneği + push testi</Text>
+                <Text style={styles.switchHint}>Biyometri · kamera · ses kaydı · çevrimdışı kuyruk</Text>
               </View>
               <Icon name="chevron-forward" size={18} color={colors.textMuted} />
             </View>

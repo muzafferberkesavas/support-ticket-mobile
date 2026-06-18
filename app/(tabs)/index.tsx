@@ -43,7 +43,7 @@ const SCOPE_OPTIONS: { value: TicketScope; label: string }[] = [
 export default function TicketsScreen() {
   const router = useRouter();
   const { isStaff } = useAuth();
-  const { online, pending } = useOffline();
+  const { online, pending, flush } = useOffline();
   const [status, setStatus] = useState<Status | undefined>();
   const [priority, setPriority] = useState<Priority | undefined>();
   const [scope, setScope] = useState<TicketScope>('all');
@@ -99,16 +99,21 @@ export default function TicketsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Çevrimdışı / kuyruk göstergesi */}
+      {/* Çevrimdışı / kuyruk göstergesi (çevrimiçiyken dokununca yeniden dener) */}
       {!online || pending > 0 ? (
-        <View style={[styles.offlineBar, online ? styles.syncBar : null]}>
+        <Pressable
+          onPress={() => {
+            if (online) void flush();
+          }}
+          style={[styles.offlineBar, online ? styles.syncBar : null]}
+        >
           <Icon name={online ? 'sync' : 'cloud-offline'} size={15} color="#fff" />
           <Text style={styles.offlineText}>
             {!online
               ? `Çevrimdışı${pending > 0 ? ` — ${pending} talep kuyrukta` : ''}`
-              : `${pending} talep senkronlanıyor…`}
+              : `${pending} talep senkronlanıyor… (dokun)`}
           </Text>
-        </View>
+        </Pressable>
       ) : null}
 
       {/* Arama */}

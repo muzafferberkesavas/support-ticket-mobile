@@ -64,14 +64,24 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       let q = await readQueue();
       if (!q.length) return;
       let synced = 0;
+      let dropped = 0;
       for (const item of [...q]) {
         try {
           await createTicket(item.payload);
           synced += 1;
           q = q.filter((x) => x.id !== item.id);
           await writeQueue(q);
-        } catch {
-          break; // bağlantı yine koptu → kalanı bir sonraki sefere
+        } catch (e) {
+          // 4xx → kalıcı hata (geçersiz veri); kuyruktan at, diğerlerini engelleme.
+          // ağ/5xx → bağlantı/sunucu sorunu; kalanı bir sonraki sefere bırak.
+          const status = (e as { response?: { status?: number } })?.response?.status;
+          if (status && status >= 400 && status < 500) {
+            q = q.filter((x) => x.id !== item.id);
+            await writeQueue(q);
+            dropped += 1;
+          } else {
+            break;
+          }
         }
       }
       await refreshCount();
@@ -79,6 +89,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
         await qc.invalidateQueries({ queryKey: ['tickets'] });
         toast({ text: `${synced} çevrimdışı talep senkronlandı ✓` });
       }
+      if (dropped > 0) toast({ text: `${dropped} geçersiz kuyruk öğesi atıldı.` });
     } finally {
       flushing.current = false;
     }
@@ -100,7 +111,10 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       await refreshCount();
       try {
         const st = await Network.getNetworkStateAsync();
-        if (mounted) setOnline(!!st.isConnected && st.isInternetReachable !== false);
+        const isOn = !!st.isConnected && st.isInternetReachable !== false;
+        if (mounted) setOnline(isOn);
+        // Açılışta çevrimiçiysek bekleyen kuyruğu hemen senkronla.
+        if (isOn) void flush();
       } catch {
         /* ignore */
       }
@@ -115,6 +129,14 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
       sub.remove();
     };
   }, [flush, refreshCount]);
+
+  // Online iken bekleyen kalırsa (ilk deneme ağ oturmadan başarısız olmuş olabilir)
+  // kısa aralıkla yeniden dene — kuyruk boşalana kadar.
+  useEffect(() => {
+    if (!online || pending === 0) return;
+    const t = setTimeout(() => void flush(), 4000);
+    return () => clearTimeout(t);
+  }, [online, pending, flush]);
 
   return <Ctx.Provider value={{ online, pending, queueTicket, flush }}>{children}</Ctx.Provider>;
 }
