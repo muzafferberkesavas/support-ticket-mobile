@@ -4,8 +4,9 @@ import type { Priority, Status } from '@/types';
 export const colors = {
   bg: '#f3f4fb',
   surface: '#ffffff',
-  surfaceAlt: '#f7f8fc',
-  border: '#e6e7f0',
+  surfaceAlt: '#f8f9fd',
+  surfaceHover: '#f1f2f9',
+  border: '#e8eaf2',
   text: '#1f2433',
   textMuted: '#6b7280',
   // Marka: web dashboard'daki indigo/mor (BrandLogo gradyanı ile aynı).

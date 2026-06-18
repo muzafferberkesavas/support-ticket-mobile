@@ -6,12 +6,24 @@ import * as Haptics from 'expo-haptics';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { useShake } from '@/features/useShake';
 import { ToastProvider } from '@/components/Toast';
 import { GradientHeader } from '@/components/GradientHeader';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
+import { applyInterFont } from '@/theme/fonts';
 import { colors } from '@/theme';
+
+// Web ile aynı Inter fontunu tüm metinlere uygula (font yüklenince devreye girer).
+applyInterFont();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 15_000 } },
@@ -77,6 +89,20 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  // Inter yüklenene kadar boş zemin; ama hata olursa (asset cache sorunu) yine de
+  // sistem fontuyla devam et — sonsuz boş ekranda takılma.
+  if (!fontsLoaded && !fontError) {
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

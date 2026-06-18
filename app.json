@@ -42,7 +42,9 @@
       "expo-secure-store",
       [
         "expo-local-authentication",
-        { "faceIDPermission": "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır." }
+        {
+          "faceIDPermission": "Uygulamaya hızlı ve güvenli giriş için Face ID kullanılır."
+        }
       ],
       [
         "expo-image-picker",
@@ -62,7 +64,8 @@
         {
           "locationWhenInUsePermission": "Talebe konum eklemek ve yakınınızdaki talepleri göstermek için konumunuz kullanılır."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
